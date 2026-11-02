@@ -53,7 +53,7 @@ export default function TaskBoard({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:min-h-[calc(100svh-8rem)] xl:auto-rows-fr xl:grid-cols-4">
         <section aria-labelledby="new-task-column-heading">
           <Card className="h-full border-dashed bg-muted/30">
             <CardHeader>
