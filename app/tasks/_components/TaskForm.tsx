@@ -7,6 +7,7 @@ import type { Task, TaskStatus } from "@/shared/task";
 import { parseCreateTaskInput, parseUpdateTaskInput, ValidationFailed } from "@/shared/task";
 import { parseTrpcError } from "@/lib/parse-trpc-error";
 import { TASK_STATUS_LABELS } from "@/lib/task-status-labels";
+import type { ParsedFieldError } from "@/lib/parse-trpc-error";
 import FieldError from "@/components/FieldError";
 import StatusBanner from "@/components/StatusBanner";
 import Spinner from "@/components/Spinner";
@@ -33,7 +34,7 @@ function validate(
   mode: "create" | "edit",
   taskId: string | undefined,
   state: FormState,
-): Record<string, string> {
+): ParsedFieldError[] {
   try {
     if (mode === "create") {
       parseCreateTaskInput({ title: state.title, description: state.description });
@@ -45,28 +46,16 @@ function validate(
         status: state.status,
       });
     }
-    return {};
+    return [];
   } catch (error) {
-    if (error instanceof ValidationFailed) return error.fieldErrors;
-    return {};
-  }
-}
-
-function mergeFieldErrors(
-  base: Record<string, string>,
-  incoming: { field: string; message: string }[],
-): Record<string, string> {
-  const next = { ...base };
-  for (const fe of incoming) {
-    // Preserve every error; if multiple target the same field, join messages
-    // so the array contract (Spec 06) is not collapsed into a single value.
-    if (next[fe.field]) {
-      next[fe.field] = `${next[fe.field]}; ${fe.message}`;
-    } else {
-      next[fe.field] = fe.message;
+    if (error instanceof ValidationFailed) {
+      return Object.entries(error.fieldErrors).map(([field, message]) => ({
+        field,
+        message,
+      }));
     }
+    return [];
   }
-  return next;
 }
 
 export default function TaskForm({ mode, initialTask }: TaskFormProps) {
@@ -78,7 +67,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
     description: "",
     status: "todo",
   });
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<ParsedFieldError[]>([]);
   const [banner, setBanner] = useState<string | null>(null);
   const seededRef = useRef(false);
 
@@ -114,7 +103,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
 
   const handleError = (error: unknown) => {
     const parsed = parseTrpcError(error);
-    setFieldErrors((prev) => mergeFieldErrors(prev, parsed.fieldErrors));
+    setFieldErrors(parsed.fieldErrors);
     setBanner(parsed.fieldErrors.length === 0 ? parsed.message : null);
   };
 
@@ -122,7 +111,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
     event.preventDefault();
     const errors = validate(mode, initialTask?.id, state);
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (errors.length > 0) return;
 
     setBanner(null);
     if (mode === "create") {
@@ -163,7 +152,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
           onBlur={handleBlur}
           disabled={isSubmitting}
         />
-        <FieldError message={fieldErrors.title} />
+        <FieldError field="title" fieldErrors={fieldErrors} />
       </div>
 
       <div>
@@ -175,7 +164,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
           onBlur={handleBlur}
           disabled={isSubmitting}
         />
-        <FieldError message={fieldErrors.description} />
+        <FieldError field="description" fieldErrors={fieldErrors} />
       </div>
 
       {isEdit ? (
@@ -194,7 +183,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
               </option>
             ))}
           </select>
-          <FieldError message={fieldErrors.status} />
+          <FieldError field="status" fieldErrors={fieldErrors} />
         </div>
       ) : null}
 

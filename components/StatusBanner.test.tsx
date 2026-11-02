@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import StatusBanner from "./StatusBanner";
 
 describe("StatusBanner", () => {
@@ -13,5 +13,16 @@ describe("StatusBanner", () => {
     render(<StatusBanner kind="error" message="Something failed" />);
     expect(screen.getByText("Something failed")).toBeInTheDocument();
     expect(screen.getByRole("alert")).toBeInTheDocument();
+  });
+
+  it("exposes a retry action when one is provided", () => {
+    const onRetry = vi.fn();
+    render(
+      <StatusBanner kind="error" message="Request failed" onRetry={onRetry} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 });
