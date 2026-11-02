@@ -14,14 +14,19 @@ const task: Task = {
 };
 
 describe("TaskList", () => {
-  it("shows empty state when there are no tasks", () => {
+  it("shows the Kanban lanes and create action when there are no tasks", () => {
     render(
       <TRPCProvider>
         <TaskList initialTasks={[]} />
       </TRPCProvider>,
     );
-    expect(screen.getByText("No tasks yet.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /create one/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create task" })).toHaveAttribute(
+      "href",
+      "/tasks/new",
+    );
+    for (const column of ["To Do", "In Progress", "Done"]) {
+      expect(screen.getByRole("region", { name: column })).toBeInTheDocument();
+    }
   });
 
   it("renders provided tasks", () => {
