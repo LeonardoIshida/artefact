@@ -17,7 +17,8 @@ Commit messages follow the pattern `TYPE-N Short description`:
 
 Rules:
 
-- `N` identifies a unit of work. Increment it when starting a new unit of that type; reuse it for follow-up commits within the same unit.
+- A branch is one unit of work: every commit on a branch carries that branch's `TYPE-N` prefix, and the prefix never changes mid-branch (e.g. branch `SPEC-1` contains `SPEC-1 Add grilling skill` and `SPEC-1 Task domain specification`).
+- Starting a new unit of work means creating a new branch with the next unused number of that type.
 - First word of the description is capitalized; keep it short; no trailing period.
 - Other change types follow the same shape when introduced (e.g. `FIX-N`, `DOCS-N`, `SPEC-N`).
 - Never commit directly to `main`: all changes land through a branch and pull request.
