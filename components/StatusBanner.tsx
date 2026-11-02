@@ -41,7 +41,7 @@ export default function StatusBanner({
         {message}
       </AlertDescription>
       {onRetry ? (
-        <AlertAction>
+        <AlertAction className="top-1/2 -translate-y-1/2">
           <Button type="button" variant="outline" size="sm" onClick={onRetry}>
             Retry
           </Button>
