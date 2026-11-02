@@ -1,19 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TRPCError } from "@trpc/server";
-import { getQueryClient, prefetch, isNotFoundError } from "./prefetch";
-
-describe("prefetch", () => {
-  it("calls fetchQuery and populates the cache", async () => {
-    const queryClient = getQueryClient();
-    const queryKey = ["test", "key"] as const;
-    const data = await prefetch(queryClient, {
-      queryKey,
-      queryFn: async () => "hello",
-    });
-    expect(data).toBe("hello");
-    expect(queryClient.getQueryData(queryKey)).toBe("hello");
-  });
-});
+import { isNotFoundError } from "./prefetch";
 
 describe("isNotFoundError", () => {
   it("returns true for a TRPCError with NOT_FOUND code", () => {

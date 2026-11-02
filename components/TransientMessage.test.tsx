@@ -21,7 +21,6 @@ describe("TransientMessage", () => {
   it("uses 3000ms by default", async () => {
     const onDismiss = vi.fn();
     render(<TransientMessage message="Deleted" onDismiss={onDismiss} />);
-    // Should still be visible well before 3s
     expect(screen.getByText("Deleted")).toBeInTheDocument();
   });
 });

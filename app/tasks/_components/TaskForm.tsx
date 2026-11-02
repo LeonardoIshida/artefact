@@ -6,39 +6,43 @@ import { trpc } from "@/app/providers";
 import type { Task, TaskStatus } from "@/shared/task";
 import { parseCreateTaskInput, parseUpdateTaskInput, ValidationFailed } from "@/shared/task";
 import { parseTrpcError } from "@/lib/parse-trpc-error";
+import { TASK_STATUS_LABELS } from "@/lib/task-status-labels";
 import FieldError from "@/components/FieldError";
 import StatusBanner from "@/components/StatusBanner";
 import Spinner from "@/components/Spinner";
 import Link from "next/link";
 
+interface FormState {
+  title: string;
+  description: string;
+  status: TaskStatus;
+}
+
 interface TaskFormProps {
   mode: "create" | "edit";
-  taskId?: string;
   initialTask?: Task;
 }
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
-  { value: "todo", label: "To do" },
-  { value: "in_progress", label: "In progress" },
-  { value: "done", label: "Done" },
+  { value: "todo", label: TASK_STATUS_LABELS.todo },
+  { value: "in_progress", label: TASK_STATUS_LABELS.in_progress },
+  { value: "done", label: TASK_STATUS_LABELS.done },
 ];
 
 function validate(
   mode: "create" | "edit",
   taskId: string | undefined,
-  title: string,
-  description: string,
-  status: TaskStatus,
+  state: FormState,
 ): Record<string, string> {
   try {
     if (mode === "create") {
-      parseCreateTaskInput({ title, description });
+      parseCreateTaskInput({ title: state.title, description: state.description });
     } else {
       parseUpdateTaskInput({
         id: taskId,
-        title,
-        description: description.trim() === "" ? null : description,
-        status,
+        title: state.title,
+        description: state.description.trim() === "" ? null : state.description,
+        status: state.status,
       });
     }
     return {};
@@ -48,76 +52,97 @@ function validate(
   }
 }
 
-export default function TaskForm({ mode, taskId, initialTask }: TaskFormProps) {
+function mergeFieldErrors(
+  base: Record<string, string>,
+  incoming: { field: string; message: string }[],
+): Record<string, string> {
+  const next = { ...base };
+  for (const fe of incoming) {
+    // Preserve every error; if multiple target the same field, join messages
+    // so the array contract (Spec 06) is not collapsed into a single value.
+    if (next[fe.field]) {
+      next[fe.field] = `${next[fe.field]}; ${fe.message}`;
+    } else {
+      next[fe.field] = fe.message;
+    }
+  }
+  return next;
+}
+
+export default function TaskForm({ mode, initialTask }: TaskFormProps) {
   const router = useRouter();
   const isEdit = mode === "edit";
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [status, setStatus] = useState<TaskStatus>("todo");
+  const [state, setState] = useState<FormState>({
+    title: "",
+    description: "",
+    status: "todo",
+  });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string | null>(null);
   const seededRef = useRef(false);
 
-  // Seed form state once the task is available (edit mode).
   useEffect(() => {
     if (isEdit && initialTask && !seededRef.current) {
-      setTitle(initialTask.title);
-      setDescription(initialTask.description ?? "");
-      setStatus(initialTask.status);
+      setState({
+        title: initialTask.title,
+        description: initialTask.description ?? "",
+        status: initialTask.status,
+      });
       seededRef.current = true;
     }
   }, [isEdit, initialTask]);
 
-  // Debounced validation.
   useEffect(() => {
     const handle = setTimeout(() => {
-      setFieldErrors(validate(mode, taskId, title, description, status));
+      setFieldErrors(validate(mode, initialTask?.id, state));
     }, 300);
     return () => clearTimeout(handle);
-  }, [mode, taskId, title, description, status]);
+  }, [mode, initialTask?.id, state]);
 
   const createMutation = trpc.tasks.create.useMutation({
     onSuccess: () => router.push("/tasks"),
-    onError: (error) => {
-      const parsed = parseTrpcError(error);
-      setFieldErrors((prev) => ({ ...prev, ...Object.fromEntries(parsed.fieldErrors.map((fe) => [fe.field, fe.message])) }));
-      setBanner(parsed.fieldErrors.length === 0 ? parsed.message : null);
-    },
+    onError: (error) => handleError(error),
   });
 
   const updateMutation = trpc.tasks.update.useMutation({
     onSuccess: () => router.push("/tasks"),
-    onError: (error) => {
-      const parsed = parseTrpcError(error);
-      setFieldErrors((prev) => ({ ...prev, ...Object.fromEntries(parsed.fieldErrors.map((fe) => [fe.field, fe.message])) }));
-      setBanner(parsed.fieldErrors.length === 0 ? parsed.message : null);
-    },
+    onError: (error) => handleError(error),
   });
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const handleError = (error: unknown) => {
+    const parsed = parseTrpcError(error);
+    setFieldErrors((prev) => mergeFieldErrors(prev, parsed.fieldErrors));
+    setBanner(parsed.fieldErrors.length === 0 ? parsed.message : null);
+  };
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    const errors = validate(mode, taskId, title, description, status);
+    const errors = validate(mode, initialTask?.id, state);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
     setBanner(null);
     if (mode === "create") {
-      createMutation.mutate({ title, description: description === "" ? undefined : description });
+      createMutation.mutate({ title: state.title, description: state.description === "" ? undefined : state.description });
     } else {
       updateMutation.mutate({
-        id: taskId as string,
-        title,
-        description: description.trim() === "" ? null : description,
-        status,
+        id: initialTask?.id as string,
+        title: state.title,
+        description: state.description.trim() === "" ? null : state.description,
+        status: state.status,
       });
     }
   };
 
-  const handleTitleBlur = () => {
-    setFieldErrors(validate(mode, taskId, title, description, status));
+  const handleBlur = () => {
+    setFieldErrors(validate(mode, initialTask?.id, state));
+  };
+
+  const handleRetry = () => {
+    handleSubmit(new Event("submit") as unknown as React.FormEvent);
   };
 
   if (isEdit && !initialTask) {
@@ -126,16 +151,16 @@ export default function TaskForm({ mode, taskId, initialTask }: TaskFormProps) {
 
   return (
     <form onSubmit={handleSubmit}>
-      {banner ? <StatusBanner kind="error" message={banner} /> : null}
+      {banner ? <StatusBanner kind="error" message={banner} onRetry={handleRetry} /> : null}
 
       <div>
         <label htmlFor="title">Title</label>
         <input
           id="title"
           type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={handleTitleBlur}
+          value={state.title}
+          onChange={(e) => setState((s) => ({ ...s, title: e.target.value }))}
+          onBlur={handleBlur}
           disabled={isSubmitting}
         />
         <FieldError message={fieldErrors.title} />
@@ -145,8 +170,9 @@ export default function TaskForm({ mode, taskId, initialTask }: TaskFormProps) {
         <label htmlFor="description">Description</label>
         <textarea
           id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={state.description}
+          onChange={(e) => setState((s) => ({ ...s, description: e.target.value }))}
+          onBlur={handleBlur}
           disabled={isSubmitting}
         />
         <FieldError message={fieldErrors.description} />
@@ -157,8 +183,9 @@ export default function TaskForm({ mode, taskId, initialTask }: TaskFormProps) {
           <label htmlFor="status">Status</label>
           <select
             id="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as TaskStatus)}
+            value={state.status}
+            onChange={(e) => setState((s) => ({ ...s, status: e.target.value as TaskStatus }))}
+            onBlur={handleBlur}
             disabled={isSubmitting}
           >
             {STATUS_OPTIONS.map((opt) => (

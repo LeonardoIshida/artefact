@@ -1,12 +1,7 @@
 import Link from "next/link";
+import { TASK_STATUS_LABELS } from "@/lib/task-status-labels";
 import type { Task } from "@/shared/task";
 import DeleteTaskButton from "./DeleteTaskButton";
-
-const STATUS_LABELS: Record<Task["status"], string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  done: "Done",
-};
 
 interface TaskListItemProps {
   task: Task;
@@ -19,9 +14,13 @@ export default function TaskListItem({ task, onDelete, isDeleting }: TaskListIte
     <li>
       <Link href={`/tasks/${task.id}/edit`}>{task.title}</Link>
       {task.description ? <p>{task.description}</p> : null}
-      <span>{STATUS_LABELS[task.status]}</span>
-      <time dateTime={task.createdAt}>{new Date(task.createdAt).toLocaleString()}</time>
-      <time dateTime={task.updatedAt}>{new Date(task.updatedAt).toLocaleString()}</time>
+      <span>{TASK_STATUS_LABELS[task.status]}</span>
+      <time dateTime={task.createdAt} suppressHydrationWarning>
+        {new Date(task.createdAt).toLocaleString()}
+      </time>
+      <time dateTime={task.updatedAt} suppressHydrationWarning>
+        {new Date(task.updatedAt).toLocaleString()}
+      </time>
       <DeleteTaskButton taskId={task.id} onDelete={onDelete} isDeleting={isDeleting} />
     </li>
   );
