@@ -146,6 +146,25 @@ describe("TaskForm (create mode)", () => {
       }),
     );
   });
+
+  it("keeps the edit form visible and offers retry after a server failure", async () => {
+    installInProcessTrpcFetch();
+    const missingTask: Task = {
+      ...sampleTask,
+      id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+    };
+    render(
+      <TRPCProvider>
+        <TaskForm mode="edit" initialTask={missingTask} />
+      </TRPCProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Update task" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Task");
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.getByLabelText("New title")).toHaveValue(sampleTask.title);
+  });
 });
 
 
