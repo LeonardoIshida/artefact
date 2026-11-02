@@ -13,7 +13,7 @@ const UPDATE_ALLOWED_KEYS = new Set(["id", "title", "description", "status"]);
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -122,7 +122,7 @@ export function parseCreateTaskInput(input: unknown): ParsedCreateTaskInput {
 export function parseUpdateTaskInput(input: unknown): UpdateTaskInput {
   if (!isPlainObject(input)) {
     throw new ValidationFailed({
-      id: "Task id must be a valid UUID",
+      id: "Invalid UUID format",
       title: "Title is required",
       description: "Description must be provided (string or null)",
       status: `Status must be one of: ${TASK_STATUSES.join(", ")}`,
@@ -134,7 +134,7 @@ export function parseUpdateTaskInput(input: unknown): UpdateTaskInput {
 
   const id = validateUuid(input.id);
   if (id === null) {
-    fieldErrors.id = "Task id must be a valid UUID";
+    fieldErrors.id = "Invalid UUID format";
   }
 
   const title = validateTitle(input.title, fieldErrors);

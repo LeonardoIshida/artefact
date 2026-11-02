@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import {
+  isPlainObject,
   parseCreateTaskInput,
   parseTaskId,
   parseUpdateTaskInput,
@@ -10,10 +11,15 @@ import {
 } from "../../shared/task";
 import { publicProcedure, router, toStandardSchema } from "../trpc";
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function toTRPCError(error: unknown): never {
+  if (error instanceof TaskNotFound) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: `Task not found: ${error.taskId}`,
+    });
+  }
+  throw error;
 }
-
 function parseIdEnvelope(input: unknown): { id: string } {
   if (!isPlainObject(input)) {
     throw new ValidationError({ id: "Invalid UUID format" });
@@ -59,13 +65,7 @@ export const taskRouter = router({
     try {
       return await ctx.repository.get(input.id);
     } catch (error) {
-      if (error instanceof TaskNotFound) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: `Task not found: ${error.taskId}`,
-        });
-      }
-      throw error;
+      toTRPCError(error);
     }
   }),
 
@@ -81,13 +81,7 @@ export const taskRouter = router({
         status: input.status,
       });
     } catch (error) {
-      if (error instanceof TaskNotFound) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: `Task not found: ${error.taskId}`,
-        });
-      }
-      throw error;
+      toTRPCError(error);
     }
   }),
 
@@ -95,13 +89,7 @@ export const taskRouter = router({
     try {
       await ctx.repository.delete(input.id);
     } catch (error) {
-      if (error instanceof TaskNotFound) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: `Task not found: ${error.taskId}`,
-        });
-      }
-      throw error;
+      toTRPCError(error);
     }
   }),
 });
