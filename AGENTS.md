@@ -30,6 +30,8 @@ Rules:
 - `domain/` — framework-free domain modules. Each domain (e.g. `domain/task/`) is split into `entity.ts` (types/constants), `errors.ts` (domain errors), `validation.ts` (pure input parsers), and `index.ts` (barrel). Tests live next to the module as `*.test.ts`.
 - `public/` — static assets.
 
+## Coding standards
+
 - **Comments explain *why*, not *what***: Any comment that is not a function summary (docblock) must explain *why* the code does something (the invariant, constraint, or trade-off), never *what* the code is doing. If code needs a "what" comment to be understood, rename symbols or simplify the structure instead.
 - **Deep modules (`codebase-design`)**: Prefer small interfaces hiding substantial behavior at clean seams. Do not leak internal helpers or representation details across module interfaces.
 - **Test-driven development (`tdd`)**: Build in vertical red-green slices against confirmed public seams. Tests must exercise observable behavior through the public interface, use independent expected literals (never tautological recomputations), and avoid mocking internal collaborators.
