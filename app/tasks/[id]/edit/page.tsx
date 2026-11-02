@@ -1,11 +1,16 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { TRPCError } from "@trpc/server";
 import { createServerCaller } from "@/server/caller";
 import type { Task } from "@/shared/task";
 import TaskForm from "../../_components/TaskForm";
+import TaskFormSkeleton from "../../_components/TaskFormSkeleton";
 
 export const instant = false;
+export const metadata: Metadata = {
+  title: "Edit Task | Artefact",
+};
 
 export default async function EditTaskPage({
   params,
@@ -26,7 +31,7 @@ export default async function EditTaskPage({
   }
 
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<TaskFormSkeleton />}>
       <TaskForm key={task.id} mode="edit" initialTask={task} />
     </Suspense>
   );
