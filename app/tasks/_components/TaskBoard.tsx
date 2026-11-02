@@ -51,7 +51,7 @@ export default function TaskBoard({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:min-h-[calc(100svh-8rem)] xl:auto-rows-fr xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:min-h-[calc(100svh-8rem)] xl:auto-rows-fr xl:grid-cols-[0.75fr_repeat(3,minmax(0,1fr))]">
         <section
           aria-labelledby="new-task-column-heading"
           className="h-full min-h-48"
