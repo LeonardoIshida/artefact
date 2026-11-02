@@ -16,6 +16,11 @@ export interface Task {
 
 export interface CreateTaskInput {
   title: string;
+  description?: string;
+}
+
+export interface ParsedCreateTaskInput {
+  title: string;
   description: string | null;
 }
 
@@ -39,6 +44,7 @@ export class ValidationFailed extends Error {
   }
 }
 
+// The spec refers to this class as both `ValidationError` (Implementation Decisions) and `ValidationFailed` (Error taxonomy).
 export const ValidationError = ValidationFailed;
 export type ValidationError = ValidationFailed;
 
@@ -52,9 +58,6 @@ export class TaskNotFound extends Error {
     this.taskId = taskId;
   }
 }
-
-export const TaskNotFoundError = TaskNotFound;
-export type TaskNotFoundError = TaskNotFound;
 
 const CREATE_ALLOWED_KEYS = new Set(["title", "description"]);
 const UPDATE_ALLOWED_KEYS = new Set(["id", "title", "description", "status"]);
@@ -79,6 +82,48 @@ function validateUuid(value: unknown): string | null {
   return value;
 }
 
+function collectUnknownKeyErrors(
+  input: Record<string, unknown>,
+  allowedKeys: ReadonlySet<string>,
+  fieldErrors: FieldErrors,
+): void {
+  for (const key of Object.keys(input)) {
+    if (!allowedKeys.has(key)) {
+      fieldErrors[key] = `Unknown field "${key}" is not allowed`;
+    }
+  }
+}
+
+function validateTitle(rawTitle: unknown, fieldErrors: FieldErrors): string {
+  if (typeof rawTitle !== "string") {
+    fieldErrors.title = "Title is required";
+    return "";
+  }
+
+  const trimmed = rawTitle.trim();
+  if (trimmed.length === 0) {
+    fieldErrors.title = "Title is required";
+  } else if (trimmed.length > TITLE_MAX_LENGTH) {
+    fieldErrors.title = `Title must be at most ${TITLE_MAX_LENGTH} characters`;
+  }
+  return trimmed;
+}
+
+function normalizeDescriptionText(
+  rawDescription: string,
+  fieldErrors: FieldErrors,
+): string | null {
+  // Whitespace-only descriptions collapse to "no description" regardless of length, so a long blank value never trips the length cap.
+  if (rawDescription.trim() === "") {
+    return null;
+  }
+  if (rawDescription.length > DESCRIPTION_MAX_LENGTH) {
+    fieldErrors.description = `Description must be at most ${DESCRIPTION_MAX_LENGTH} characters`;
+    return null;
+  }
+  return rawDescription;
+}
+
 /**
  * Validates that an untrusted value is a well-formed task UUID.
  */
@@ -93,39 +138,22 @@ export function parseTaskId(id: unknown): string {
 /**
  * Validates and normalizes a raw payload for creating a new task.
  */
-export function parseCreateTaskInput(input: unknown): CreateTaskInput {
+export function parseCreateTaskInput(input: unknown): ParsedCreateTaskInput {
   if (!isPlainObject(input)) {
-    throw new ValidationFailed({ _payload: "Input must be a plain object" });
+    throw new ValidationFailed({ title: "Title is required" });
   }
 
   const fieldErrors: FieldErrors = {};
+  collectUnknownKeyErrors(input, CREATE_ALLOWED_KEYS, fieldErrors);
 
-  for (const key of Object.keys(input)) {
-    if (!CREATE_ALLOWED_KEYS.has(key)) {
-      fieldErrors[key] = `Unknown field "${key}" is not allowed`;
-    }
-  }
-
-  let title = "";
-  if (typeof input.title !== "string") {
-    fieldErrors.title = "Title is required";
-  } else {
-    title = input.title.trim();
-    if (title.length === 0) {
-      fieldErrors.title = "Title is required";
-    } else if (title.length > TITLE_MAX_LENGTH) {
-      fieldErrors.title = `Title must be at most ${TITLE_MAX_LENGTH} characters`;
-    }
-  }
+  const title = validateTitle(input.title, fieldErrors);
 
   let description: string | null = null;
   if (input.description !== undefined) {
     if (typeof input.description !== "string") {
       fieldErrors.description = "Description must be a string";
-    } else if (input.description.length > DESCRIPTION_MAX_LENGTH) {
-      fieldErrors.description = `Description must be at most ${DESCRIPTION_MAX_LENGTH} characters`;
-    } else if (input.description.trim() !== "") {
-      description = input.description;
+    } else {
+      description = normalizeDescriptionText(input.description, fieldErrors);
     }
   }
 
@@ -144,33 +172,23 @@ export function parseCreateTaskInput(input: unknown): CreateTaskInput {
  */
 export function parseUpdateTaskInput(input: unknown): UpdateTaskInput {
   if (!isPlainObject(input)) {
-    throw new ValidationFailed({ _payload: "Input must be a plain object" });
+    throw new ValidationFailed({
+      id: "Task id must be a valid UUID",
+      title: "Title is required",
+      description: "Description must be provided (string or null)",
+      status: `Status must be one of: ${TASK_STATUSES.join(", ")}`,
+    });
   }
 
   const fieldErrors: FieldErrors = {};
-
-  for (const key of Object.keys(input)) {
-    if (!UPDATE_ALLOWED_KEYS.has(key)) {
-      fieldErrors[key] = `Unknown field "${key}" is not allowed`;
-    }
-  }
+  collectUnknownKeyErrors(input, UPDATE_ALLOWED_KEYS, fieldErrors);
 
   const id = validateUuid(input.id);
   if (id === null) {
     fieldErrors.id = "Task id must be a valid UUID";
   }
 
-  let title = "";
-  if (typeof input.title !== "string") {
-    fieldErrors.title = "Title is required";
-  } else {
-    title = input.title.trim();
-    if (title.length === 0) {
-      fieldErrors.title = "Title is required";
-    } else if (title.length > TITLE_MAX_LENGTH) {
-      fieldErrors.title = `Title must be at most ${TITLE_MAX_LENGTH} characters`;
-    }
-  }
+  const title = validateTitle(input.title, fieldErrors);
 
   let description: string | null = null;
   // PUT replaces the entire editable state, so callers must explicitly send `null` to clear a description rather than omitting the key.
@@ -179,10 +197,8 @@ export function parseUpdateTaskInput(input: unknown): UpdateTaskInput {
   } else if (input.description !== null) {
     if (typeof input.description !== "string") {
       fieldErrors.description = "Description must be a string or null";
-    } else if (input.description.length > DESCRIPTION_MAX_LENGTH) {
-      fieldErrors.description = `Description must be at most ${DESCRIPTION_MAX_LENGTH} characters`;
-    } else if (input.description.trim() !== "") {
-      description = input.description;
+    } else {
+      description = normalizeDescriptionText(input.description, fieldErrors);
     }
   }
 

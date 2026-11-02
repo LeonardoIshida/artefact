@@ -4,10 +4,22 @@ import {
   parseTaskId,
   parseUpdateTaskInput,
   TaskNotFound,
-  TaskNotFoundError,
   ValidationError,
   ValidationFailed,
 } from "./task";
+
+function captureValidationError(fn: () => unknown): ValidationFailed {
+  let caught: unknown;
+  try {
+    fn();
+  } catch (error) {
+    caught = error;
+  }
+
+  expect(caught).toBeInstanceOf(ValidationError);
+  expect(caught).toBeInstanceOf(ValidationFailed);
+  return caught as ValidationFailed;
+}
 
 describe("parseCreateTaskInput", () => {
   it("parses a valid title, trims surrounding whitespace, and defaults omitted description to null", () => {
@@ -49,16 +61,7 @@ describe("parseCreateTaskInput", () => {
     { label: "whitespace-only title", input: { title: "   \t\n  " } },
     { label: "title exceeding 200 chars", input: { title: "a".repeat(201) } },
   ])("rejects invalid title ($label) with ValidationFailed carrying fieldErrors.title", ({ input }) => {
-    let caught: unknown;
-    try {
-      parseCreateTaskInput(input);
-    } catch (error) {
-      caught = error;
-    }
-
-    expect(caught).toBeInstanceOf(ValidationError);
-    expect(caught).toBeInstanceOf(ValidationFailed);
-    const validationError = caught as ValidationError;
+    const validationError = captureValidationError(() => parseCreateTaskInput(input));
     expect(validationError.code).toBe("VALIDATION_FAILED");
     expect(typeof validationError.fieldErrors.title).toBe("string");
     expect(validationError.fieldErrors.title.length).toBeGreaterThan(0);
@@ -78,15 +81,9 @@ describe("parseCreateTaskInput", () => {
     { label: "non-string number", description: 42 },
     { label: "null on create", description: null },
   ])("rejects invalid description ($label) on create with fieldErrors.description", ({ description }) => {
-    let caught: unknown;
-    try {
-      parseCreateTaskInput({ title: "Valid title", description });
-    } catch (error) {
-      caught = error;
-    }
-
-    expect(caught).toBeInstanceOf(ValidationFailed);
-    const validationError = caught as ValidationError;
+    const validationError = captureValidationError(() =>
+      parseCreateTaskInput({ title: "Valid title", description }),
+    );
     expect(typeof validationError.fieldErrors.description).toBe("string");
     expect(validationError.fieldErrors.description.length).toBeGreaterThan(0);
   });
@@ -98,18 +95,12 @@ describe("parseCreateTaskInput", () => {
     { label: "updatedAt", extraKey: "updatedAt", extraValue: "2026-11-02T00:00:00.000Z" },
     { label: "typo field", extraKey: "titulo", extraValue: "Wrong key" },
   ])("rejects unknown key ($label) on create", ({ extraKey, extraValue }) => {
-    let caught: unknown;
-    try {
+    const validationError = captureValidationError(() =>
       parseCreateTaskInput({
         title: "Valid title",
         [extraKey]: extraValue,
-      });
-    } catch (error) {
-      caught = error;
-    }
-
-    expect(caught).toBeInstanceOf(ValidationFailed);
-    const validationError = caught as ValidationError;
+      }),
+    );
     expect(typeof validationError.fieldErrors[extraKey]).toBe("string");
   });
 
@@ -119,7 +110,8 @@ describe("parseCreateTaskInput", () => {
     { label: "array", input: [] },
     { label: "primitive string", input: "Task" },
   ])("rejects non-object payload ($label) on create with ValidationFailed", ({ input }) => {
-    expect(() => parseCreateTaskInput(input)).toThrow(ValidationFailed);
+    const validationError = captureValidationError(() => parseCreateTaskInput(input));
+    expect(typeof validationError.fieldErrors.title).toBe("string");
   });
 });
 
@@ -169,20 +161,14 @@ describe("parseUpdateTaskInput", () => {
     { label: "non-hex characters", id: "550e8400-e29b-41d4-a716-44665544000z" },
     { label: "number", id: 12345 },
   ])("rejects malformed id ($label) on update with fieldErrors.id", ({ id }) => {
-    let caught: unknown;
-    try {
+    const validationError = captureValidationError(() =>
       parseUpdateTaskInput({
         id,
         title: "Valid title",
         description: null,
         status: "todo",
-      });
-    } catch (error) {
-      caught = error;
-    }
-
-    expect(caught).toBeInstanceOf(ValidationFailed);
-    const validationError = caught as ValidationError;
+      }),
+    );
     expect(typeof validationError.fieldErrors.id).toBe("string");
   });
 
@@ -249,34 +235,20 @@ describe("parseUpdateTaskInput", () => {
       expectedField: "createdAt",
     },
   ])("rejects invalid update payload ($label) with fieldErrors.$expectedField", ({ payload, expectedField }) => {
-    let caught: unknown;
-    try {
-      parseUpdateTaskInput(payload);
-    } catch (error) {
-      caught = error;
-    }
-
-    expect(caught).toBeInstanceOf(ValidationFailed);
-    const validationError = caught as ValidationError;
+    const validationError = captureValidationError(() => parseUpdateTaskInput(payload));
     expect(typeof validationError.fieldErrors[expectedField]).toBe("string");
   });
 
   it("collects multiple field errors simultaneously when several fields are invalid", () => {
-    let caught: unknown;
-    try {
+    const validationError = captureValidationError(() =>
       parseUpdateTaskInput({
         id: "bad-id",
         title: "   ",
         description: 123,
         status: "invalid",
         extra: true,
-      });
-    } catch (error) {
-      caught = error;
-    }
-
-    expect(caught).toBeInstanceOf(ValidationFailed);
-    const validationError = caught as ValidationError;
+      }),
+    );
     expect(Object.keys(validationError.fieldErrors).sort()).toEqual([
       "description",
       "extra",
@@ -291,7 +263,13 @@ describe("parseUpdateTaskInput", () => {
     { label: "undefined", input: undefined },
     { label: "array", input: [] },
   ])("rejects non-object payload ($label) on update with ValidationFailed", ({ input }) => {
-    expect(() => parseUpdateTaskInput(input)).toThrow(ValidationFailed);
+    const validationError = captureValidationError(() => parseUpdateTaskInput(input));
+    expect(Object.keys(validationError.fieldErrors).sort()).toEqual([
+      "description",
+      "id",
+      "status",
+      "title",
+    ]);
   });
 });
 
@@ -306,15 +284,7 @@ describe("parseTaskId", () => {
     { label: "null", id: null },
     { label: "undefined", id: undefined },
   ])("rejects invalid id ($label) with ValidationFailed carrying fieldErrors.id", ({ id }) => {
-    let caught: unknown;
-    try {
-      parseTaskId(id);
-    } catch (error) {
-      caught = error;
-    }
-
-    expect(caught).toBeInstanceOf(ValidationFailed);
-    const validationError = caught as ValidationError;
+    const validationError = captureValidationError(() => parseTaskId(id));
     expect(typeof validationError.fieldErrors.id).toBe("string");
   });
 });
@@ -325,7 +295,6 @@ describe("TaskNotFound", () => {
 
     expect(error).toBeInstanceOf(Error);
     expect(error).toBeInstanceOf(TaskNotFound);
-    expect(error).toBeInstanceOf(TaskNotFoundError);
     expect(error.name).toBe("TaskNotFound");
     expect(error.code).toBe("TASK_NOT_FOUND");
     expect(error.taskId).toBe(VALID_UUID);
