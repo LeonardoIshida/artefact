@@ -31,19 +31,28 @@ const t = initTRPC.context<Context>().create({
           ? error
           : null;
 
-    let fieldErrors = validationError?.fieldErrors;
+    // Wire shape: array of { field, message } (Spec 06). Domain keeps a map
+    // internally; conversion happens here at the boundary.
+    let fieldErrors: Array<{ field: string; message: string }> | undefined;
+    if (validationError) {
+      fieldErrors = Object.entries(validationError.fieldErrors).map(([field, message]) => ({
+        field,
+        message,
+      }));
+    }
 
     if (!fieldErrors) {
       const cause = error.cause as
         | { issues?: Array<{ message: string; path?: readonly (string | number)[] }> }
         | null;
       if (cause && Array.isArray(cause.issues)) {
-        const collected: Record<string, string> = {};
-        for (const issue of cause.issues) {
-          const field = issue.path && issue.path.length ? String(issue.path[0]) : undefined;
-          if (field) collected[field] = issue.message;
-        }
-        if (Object.keys(collected).length > 0) fieldErrors = collected;
+        const collected = cause.issues
+          .map((issue) => {
+            const field = issue.path && issue.path.length ? String(issue.path[0]) : undefined;
+            return field ? { field, message: issue.message } : null;
+          })
+          .filter((x): x is { field: string; message: string } => x !== null);
+        if (collected.length > 0) fieldErrors = collected;
       }
     }
 
