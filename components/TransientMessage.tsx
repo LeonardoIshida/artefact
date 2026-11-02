@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import StatusBanner from "@/components/StatusBanner";
 
 interface TransientMessageProps {
   message: string;
@@ -19,7 +20,10 @@ export default function TransientMessage({
 }: TransientMessageProps) {
   const [visible, setVisible] = useState(true);
   const onDismissRef = useRef(onDismiss);
-  onDismissRef.current = onDismiss;
+
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   useEffect(() => {
     let dismissed = false;
@@ -32,7 +36,7 @@ export default function TransientMessage({
 
     const timer = setTimeout(dismiss, duration);
 
-    // Dismiss on the next user action (click or key press).
+    // Dismiss on interaction so stale feedback does not obscure the next action.
     const handleAction = () => dismiss();
     window.addEventListener("click", handleAction, { once: true });
     window.addEventListener("keydown", handleAction, { once: true });
@@ -46,14 +50,5 @@ export default function TransientMessage({
 
   if (!visible) return null;
 
-  return (
-    <div role={kind === "error" ? "alert" : "status"} data-kind={kind}>
-      {message}
-      {onRetry ? (
-        <button type="button" onClick={onRetry}>
-          Retry
-        </button>
-      ) : null}
-    </div>
-  );
+  return <StatusBanner kind={kind} message={message} onRetry={onRetry} />;
 }

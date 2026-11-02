@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import TransientMessage from "./TransientMessage";
 
 describe("TransientMessage", () => {
@@ -22,5 +22,21 @@ describe("TransientMessage", () => {
     const onDismiss = vi.fn();
     render(<TransientMessage message="Deleted" onDismiss={onDismiss} />);
     expect(screen.getByText("Deleted")).toBeInTheDocument();
+  });
+
+  it("runs the retry action and dismisses after the user retries", () => {
+    const onRetry = vi.fn();
+    render(
+      <TransientMessage
+        message="Could not delete task"
+        kind="error"
+        onRetry={onRetry}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(onRetry).toHaveBeenCalledOnce();
+    expect(screen.queryByText("Could not delete task")).not.toBeInTheDocument();
   });
 });
