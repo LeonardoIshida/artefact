@@ -48,7 +48,7 @@ describe("TaskForm (edit mode)", () => {
   it("pre-fills title, description, and status from initialTask", () => {
     render(
       <TRPCProvider>
-        <TaskForm mode="edit" taskId={sampleTask.id} initialTask={sampleTask} />
+        <TaskForm mode="edit" initialTask={sampleTask} />
       </TRPCProvider>,
     );
     expect(screen.getByDisplayValue("Buy milk")).toBeInTheDocument();
@@ -60,7 +60,7 @@ describe("TaskForm (edit mode)", () => {
   it("renders status select in edit mode", () => {
     render(
       <TRPCProvider>
-        <TaskForm mode="edit" taskId={sampleTask.id} initialTask={sampleTask} />
+        <TaskForm mode="edit" initialTask={sampleTask} />
       </TRPCProvider>,
     );
     expect(screen.getByLabelText("Status")).toBeInTheDocument();

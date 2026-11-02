@@ -1,7 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
+import { TRPCError } from "@trpc/server";
 import { createServerCaller } from "@/server/caller";
-import { isNotFoundError } from "@/server/prefetch";
 import TaskForm from "../../_components/TaskForm";
 
 export const instant = false;
@@ -13,16 +13,17 @@ export default async function EditTaskPage({
 }) {
   const { id } = await params;
   const caller = await createServerCaller();
-  let task;
   try {
-    task = await caller.tasks.get({ id });
+    const task = await caller.tasks.get({ id });
+    return (
+      <Suspense fallback={null}>
+        <TaskForm mode="edit" initialTask={task} />
+      </Suspense>
+    );
   } catch (error) {
-    if (isNotFoundError(error)) notFound();
+    if (error instanceof TRPCError && (error.code === "NOT_FOUND" || error.code === "BAD_REQUEST")) {
+      redirect("/tasks");
+    }
     throw error;
   }
-  return (
-    <Suspense fallback={null}>
-      <TaskForm mode="edit" taskId={id} initialTask={task} />
-    </Suspense>
-  );
 }

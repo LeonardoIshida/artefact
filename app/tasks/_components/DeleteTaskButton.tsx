@@ -12,10 +12,6 @@ interface DeleteTaskButtonProps {
 export default function DeleteTaskButton({ taskId, onDelete, isDeleting }: DeleteTaskButtonProps) {
   const [confirming, setConfirming] = useState(false);
 
-  if (isDeleting && !confirming) {
-    // still show spinner on the trash button while a deletion is in flight
-  }
-
   if (confirming) {
     return (
       <>
@@ -44,7 +40,7 @@ export default function DeleteTaskButton({ taskId, onDelete, isDeleting }: Delet
       onClick={() => setConfirming(true)}
       disabled={isDeleting}
     >
-      🗑
+      {isDeleting ? <Spinner label="Deleting" /> : "🗑"}
     </button>
   );
 }
