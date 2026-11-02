@@ -26,8 +26,9 @@ Rules:
 
 ## Project structure
 
-- `app/` — Next.js routes, pages, and API handlers (frontend + backend in one repo).
-- `domain/` — framework-free domain modules. Each domain (e.g. `domain/task/`) is split into `entity.ts` (types/constants), `errors.ts` (domain errors), `validation.ts` (pure input parsers), and `index.ts` (barrel). Tests live next to the module as `*.test.ts`.
+- `app/` — Next.js frontend: pages, layouts, components, and route handlers.
+- `server/` — backend wiring: tRPC routers, procedures, repositories, and context.
+- `shared/` — framework-free code used by both sides (e.g. `shared/task/`): entity types/constants, domain errors, and pure input parsers. Split into `entity.ts`, `errors.ts`, `validation.ts`, with an `index.ts` barrel. Tests live next to the module as `*.test.ts`.
 - `public/` — static assets.
 
 ## Coding standards
