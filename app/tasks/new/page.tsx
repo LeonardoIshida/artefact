@@ -1,3 +1,5 @@
+import TaskForm from "../_components/TaskForm";
+
 export default function NewTaskPage() {
-  return null;
+  return <TaskForm mode="create" />;
 }
