@@ -2,9 +2,9 @@ import { dehydrate, HydrationBoundary, type QueryClient } from "@tanstack/react-
 import { TRPCError } from "@trpc/server";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { createQueryClient } from "../shared/query-client";
+import { createQueryClient } from "../lib/query-client";
 
-export { createQueryClient } from "../shared/query-client";
+export { createQueryClient } from "../lib/query-client";
 
 /**
  * Creates a fresh React Query client for a single SSR request, using the

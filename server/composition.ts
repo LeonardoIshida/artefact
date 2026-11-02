@@ -16,6 +16,3 @@ export function getTaskRepository(): TaskRepository {
   }
   return instance;
 }
-
-// Backwards-compatible alias for callers that imported the singleton directly.
-export const taskRepository: TaskRepository = getTaskRepository();

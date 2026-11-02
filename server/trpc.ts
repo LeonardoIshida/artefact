@@ -12,7 +12,7 @@ export async function createTRPCContext(): Promise<Context> {
 }
 
 // Local mirror of the Standard Schema v1 spec (https://standardschema.dev).
-export interface StandardSchemaV1<Input = unknown, Output = Input> {
+interface StandardSchemaV1<Input = unknown, Output = Input> {
   readonly "~standard": {
     readonly version: 1;
     readonly vendor: string;
@@ -41,21 +41,6 @@ const t = initTRPC.context<Context>().create({
       }));
     }
 
-    if (!fieldErrors) {
-      const cause = error.cause as
-        | { issues?: Array<{ message: string; path?: readonly (string | number)[] }> }
-        | null;
-      if (cause && Array.isArray(cause.issues)) {
-        const collected = cause.issues
-          .map((issue) => {
-            const field = issue.path && issue.path.length ? String(issue.path[0]) : undefined;
-            return field ? { field, message: issue.message } : null;
-          })
-          .filter((x): x is { field: string; message: string } => x !== null);
-        if (collected.length > 0) fieldErrors = collected;
-      }
-    }
-
     return {
       ...shape,
       data: {
@@ -69,7 +54,6 @@ const t = initTRPC.context<Context>().create({
 export const router = t.router;
 export const publicProcedure = t.procedure;
 export const createCallerFactory = t.createCallerFactory;
-export const middleware = t.middleware;
 
 export function toStandardSchema<TInput, TOutput>(
   parse: (input: unknown) => TOutput,
