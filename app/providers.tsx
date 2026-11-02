@@ -1,26 +1,15 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import type { AppRouter } from "@/server/routers/_app";
+import { createQueryClient } from "@/shared/query-client";
 import { useState } from "react";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-// Sensible defaults shared by client and server QueryClients (Spec 03).
-export function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 30 * 1000,
-        retry: 3,
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-        refetchOnWindowFocus: true,
-      },
-    },
-  });
-}
+export { createQueryClient };
 
 function getBaseUrl() {
   if (typeof window !== "undefined") return "";
