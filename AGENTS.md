@@ -27,8 +27,8 @@ Rules:
 ## Project structure
 
 - `app/` — Next.js frontend: pages, layouts, components, and route handlers.
-- `server/` — backend wiring: tRPC routers, procedures, repositories, and context.
-- `shared/` — framework-free code used by both sides (e.g. `shared/task/`): entity types/constants, domain errors, and pure input parsers. Split into `entity.ts`, `errors.ts`, `validation.ts`, with an `index.ts` barrel. Tests live next to the module as `*.test.ts`.
+- `server/` — backend wiring: tRPC routers/procedures in `server/routers/` and `server/trpc.ts`, plus persistence adapters in `server/repositories/` and the single composition point in `server/composition.ts`.
+- `shared/` — framework-free code used by both sides (e.g. `shared/task/`): entity types/constants, domain errors, pure input parsers, and the `TaskRepository` interface. Split into `entity.ts`, `errors.ts`, `repository.ts`, `validation.ts`, with an `index.ts` barrel. Tests live next to the module as `*.test.ts`.
 - `public/` — static assets.
 
 ## Coding standards
