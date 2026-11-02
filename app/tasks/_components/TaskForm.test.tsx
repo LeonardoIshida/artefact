@@ -1,14 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { POST } from "@/app/api/trpc/[trpc]/route";
 import { TRPCProvider } from "@/app/providers";
+import { createServerCaller } from "@/server/caller";
 import TaskForm from "./TaskForm";
 import type { Task } from "@/shared/task";
 
+const navigation = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => navigation,
   redirect: vi.fn(),
 }));
-
 
 const sampleTask: Task = {
   id: "123e4567-e89b-12d3-a456-426614174000",
@@ -19,8 +22,30 @@ const sampleTask: Task = {
   updatedAt: "2026-11-02T10:00:00.000Z",
 };
 
+beforeEach(() => {
+  navigation.push.mockClear();
+  navigation.replace.mockClear();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+function installInProcessTrpcFetch() {
+  vi.stubGlobal(
+    "fetch",
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request
+          ? input
+          : new Request(new URL(String(input), "http://localhost"), init);
+      return POST(request);
+    },
+  );
+}
+
 describe("TaskForm (create mode)", () => {
-  it("renders title and description inputs, no status select, Create button", () => {
+  it("renders a simple create form without comparison columns or status", () => {
     render(
       <TRPCProvider>
         <TaskForm mode="create" />
@@ -28,8 +53,10 @@ describe("TaskForm (create mode)", () => {
     );
     expect(screen.getByLabelText("Title")).toBeInTheDocument();
     expect(screen.getByLabelText("Description")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /create/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText("New status")).not.toBeInTheDocument();
+    expect(screen.queryByText("Current title")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create task" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
   });
 
   it("shows a title error when submitting empty", () => {
@@ -41,28 +68,122 @@ describe("TaskForm (create mode)", () => {
     fireEvent.click(screen.getByRole("button", { name: /create/i }));
     expect(screen.getByText("Title is required")).toBeInTheDocument();
   });
+
+  it("debounces validation while the user is typing", async () => {
+    render(
+      <TRPCProvider>
+        <TaskForm mode="create" />
+      </TRPCProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Title"), {
+      target: { value: "   " },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(screen.queryByText("Title is required")).not.toBeInTheDocument();
+    expect(await screen.findByText("Title is required")).toBeInTheDocument();
+  });
+
+  it("clears a create draft and stays on the form when canceled", () => {
+    render(
+      <TRPCProvider>
+        <TaskForm mode="create" />
+      </TRPCProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Title"), {
+      target: { value: "Draft task" },
+    });
+    fireEvent.change(screen.getByLabelText("Description"), {
+      target: { value: "Draft notes" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.getByLabelText("Title")).toHaveValue("");
+    expect(screen.getByLabelText("Description")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Create task" })).toBeInTheDocument();
+    expect(navigation.push).not.toHaveBeenCalled();
+  });
+
+  it("returns to the board with creation feedback after a successful save", async () => {
+    installInProcessTrpcFetch();
+
+    render(
+      <TRPCProvider>
+        <TaskForm mode="create" />
+      </TRPCProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Title"), {
+      target: { value: "Create a release checklist" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create task" }));
+
+    await waitFor(() =>
+      expect(navigation.push).toHaveBeenCalledWith("/tasks?feedback=created", {
+        scroll: false,
+      }),
+    );
+  });
+
+  it("returns to the board with update feedback after a successful edit", async () => {
+    installInProcessTrpcFetch();
+    const caller = await createServerCaller();
+    const task = await caller.tasks.create({ title: "Original title" });
+
+    render(
+      <TRPCProvider>
+        <TaskForm mode="edit" initialTask={task} />
+      </TRPCProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("New title"), {
+      target: { value: "Updated title" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update task" }));
+
+    await waitFor(() =>
+      expect(navigation.push).toHaveBeenCalledWith("/tasks?feedback=updated", {
+        scroll: false,
+      }),
+    );
+  });
 });
 
 
 describe("TaskForm (edit mode)", () => {
-  it("pre-fills title, description, and status from initialTask", () => {
+  it("shows current values alongside pre-filled editable values", () => {
     render(
       <TRPCProvider>
         <TaskForm mode="edit" initialTask={sampleTask} />
       </TRPCProvider>,
     );
-    expect(screen.getByDisplayValue("Buy milk")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("2% fat")).toBeInTheDocument();
-    expect(screen.getByRole("combobox")).toHaveValue("in_progress");
-    expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
+    expect(screen.getByText("Current title")).toBeInTheDocument();
+    expect(screen.getByText("Buy milk")).toBeInTheDocument();
+    expect(screen.getByLabelText("New title")).toHaveValue("Buy milk");
+    expect(screen.getByText("Current description")).toBeInTheDocument();
+    expect(screen.getByLabelText("New description")).toHaveValue("2% fat");
+    expect(screen.getByText("Current status")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "New status" })).toHaveTextContent(
+      "In progress",
+    );
+    expect(screen.getByRole("button", { name: "Update task" })).toBeInTheDocument();
   });
 
-  it("renders status select in edit mode", () => {
+  it("marks changed values and resets an edit draft on cancel", () => {
     render(
       <TRPCProvider>
         <TaskForm mode="edit" initialTask={sampleTask} />
       </TRPCProvider>,
     );
-    expect(screen.getByLabelText("Status")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("New title"), {
+      target: { value: "Buy eggs" },
+    });
+    expect(screen.getByText("Changed")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.getByLabelText("New title")).toHaveValue("Buy milk");
+    expect(screen.getByLabelText("New description")).toHaveValue("2% fat");
+    expect(screen.queryByText("Changed")).not.toBeInTheDocument();
+    expect(navigation.push).not.toHaveBeenCalled();
   });
 });
