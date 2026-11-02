@@ -25,10 +25,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-svh flex-col bg-background font-sans text-foreground antialiased">
+      <body className="flex h-dvh flex-col overflow-hidden bg-background font-sans text-foreground antialiased">
         <AppHeader />
         <TRPCProvider>
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+          <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
             {children}
           </main>
         </TRPCProvider>

@@ -116,12 +116,12 @@ function ComparisonField({
   children,
 }: ComparisonFieldProps) {
   return (
-    <div className="grid gap-3 border-b border-border pb-5 last:border-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center">
-      <div className="space-y-1 rounded-lg bg-muted/40 px-3 py-2">
+    <div className="grid gap-2 border-b border-border pb-3 last:border-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center">
+      <div className="space-y-1 rounded-lg bg-muted/40 px-3 py-1.5">
         <p className="text-xs font-medium text-muted-foreground">
           Current {label.toLowerCase()}
         </p>
-        <div className="min-h-8 break-words whitespace-pre-wrap text-sm">
+        <div className="max-h-20 min-h-8 overflow-y-auto break-words whitespace-pre-wrap text-sm">
           {currentValue}
         </div>
       </div>
@@ -244,8 +244,8 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
   }
 
   return (
-    <section className="mx-auto w-full max-w-4xl space-y-6">
-      <header className="space-y-2">
+    <section className="mx-auto w-full max-w-4xl space-y-4">
+      <header className="space-y-1.5">
         <h1 className="text-2xl font-semibold tracking-tight">
           {isEdit ? "Edit task" : "Create task"}
         </h1>
@@ -256,12 +256,12 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
         </p>
       </header>
 
-      <form className="space-y-6" onSubmit={handleSubmit}>
+      <form className="space-y-4" onSubmit={handleSubmit}>
         {banner ? <StatusBanner kind="error" message={banner} onRetry={submit} /> : null}
 
         {isEdit && initialTask ? (
           <Card>
-            <CardContent className="space-y-6 py-6">
+            <CardContent className="space-y-4 py-4">
               <ComparisonField
                 field="title"
                 id="new-title"
@@ -290,6 +290,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
               >
                 <Textarea
                   id="new-description"
+                  className="max-h-24 overflow-y-auto"
                   value={state.description}
                   onChange={(event) =>
                     updateField("description", event.target.value)
@@ -343,7 +344,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
           </Card>
         ) : (
           <Card>
-            <CardContent className="space-y-5 py-6">
+            <CardContent className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -361,6 +362,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
+                  className="max-h-24 overflow-y-auto"
                   value={state.description}
                   onChange={(event) =>
                     updateField("description", event.target.value)

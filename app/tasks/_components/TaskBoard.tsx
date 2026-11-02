@@ -51,7 +51,7 @@ export default function TaskBoard({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:min-h-[calc(100svh-8rem)] xl:auto-rows-fr xl:grid-cols-[0.75fr_repeat(3,minmax(0,1fr))]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:min-h-0 xl:flex-1 xl:auto-rows-fr xl:grid-cols-[0.75fr_repeat(3,minmax(0,1fr))]">
         <section
           aria-labelledby="new-task-column-heading"
           className="h-full min-h-48"
@@ -75,7 +75,7 @@ export default function TaskBoard({
 
           return (
             <section key={status} aria-labelledby={`task-column-${status}`}>
-              <Card className="h-full bg-muted/30">
+              <Card className="h-full min-h-0 bg-muted/30">
                 <CardHeader>
                   <h2
                     id={`task-column-${status}`}
@@ -92,7 +92,7 @@ export default function TaskBoard({
                     </Badge>
                   </CardAction>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-3">
+                <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
                   {columnTasks.length === 0 ? (
                     <p className="rounded-lg border border-dashed bg-background px-3 py-6 text-center text-sm text-muted-foreground">
                       No tasks
