@@ -24,7 +24,11 @@ Rules:
 - Never commit directly to `main`: all changes land through a branch and pull request.
 - Branch names are the type word plus the number only, e.g. `REPO-1`, `FEAT-2` — no description in the name.
 
-## Coding standards
+## Project structure
+
+- `app/` — Next.js routes, pages, and API handlers (frontend + backend in one repo).
+- `domain/` — framework-free domain modules. Each domain (e.g. `domain/task/`) is split into `entity.ts` (types/constants), `errors.ts` (domain errors), `validation.ts` (pure input parsers), and `index.ts` (barrel). Tests live next to the module as `*.test.ts`.
+- `public/` — static assets.
 
 - **Comments explain *why*, not *what***: Any comment that is not a function summary (docblock) must explain *why* the code does something (the invariant, constraint, or trade-off), never *what* the code is doing. If code needs a "what" comment to be understood, rename symbols or simplify the structure instead.
 - **Deep modules (`codebase-design`)**: Prefer small interfaces hiding substantial behavior at clean seams. Do not leak internal helpers or representation details across module interfaces.
