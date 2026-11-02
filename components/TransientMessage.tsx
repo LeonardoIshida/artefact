@@ -19,7 +19,10 @@ export default function TransientMessage({
 }: TransientMessageProps) {
   const [visible, setVisible] = useState(true);
   const onDismissRef = useRef(onDismiss);
-  onDismissRef.current = onDismiss;
+
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  });
 
   useEffect(() => {
     let dismissed = false;
