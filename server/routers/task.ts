@@ -16,7 +16,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 function parseIdEnvelope(input: unknown): { id: string } {
   if (!isPlainObject(input)) {
-    throw new ValidationError({ id: "Task id must be a valid UUID" });
+    throw new ValidationError({ id: "Invalid UUID format" });
   }
   const fieldErrors: Record<string, string> = {};
   for (const key of Object.keys(input)) {

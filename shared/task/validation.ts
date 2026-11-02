@@ -79,7 +79,7 @@ function normalizeDescriptionText(
 export function parseTaskId(id: unknown): string {
   const validId = validateUuid(id);
   if (validId === null) {
-    throw new ValidationFailed({ id: "Task id must be a valid UUID" });
+    throw new ValidationFailed({ id: "Invalid UUID format" });
   }
   return validId;
 }
