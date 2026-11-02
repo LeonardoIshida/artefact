@@ -1,63 +1,12 @@
-export const TASK_STATUSES = ["todo", "in_progress", "done"] as const;
-
-export type TaskStatus = (typeof TASK_STATUSES)[number];
-
-export const TITLE_MAX_LENGTH = 200;
-export const DESCRIPTION_MAX_LENGTH = 2000;
-
-export interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  status: TaskStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateTaskInput {
-  title: string;
-  description?: string;
-}
-
-export interface ParsedCreateTaskInput {
-  title: string;
-  description: string | null;
-}
-
-export interface UpdateTaskInput {
-  id: string;
-  title: string;
-  description: string | null;
-  status: TaskStatus;
-}
-
-export type FieldErrors = Record<string, string>;
-
-export class ValidationFailed extends Error {
-  readonly code = "VALIDATION_FAILED" as const;
-  readonly fieldErrors: FieldErrors;
-
-  constructor(fieldErrors: FieldErrors, message = "Validation failed") {
-    super(message);
-    this.name = "ValidationFailed";
-    this.fieldErrors = fieldErrors;
-  }
-}
-
-// The spec refers to this class as both `ValidationError` (Implementation Decisions) and `ValidationFailed` (Error taxonomy).
-export const ValidationError = ValidationFailed;
-export type ValidationError = ValidationFailed;
-
-export class TaskNotFound extends Error {
-  readonly code = "TASK_NOT_FOUND" as const;
-  readonly taskId: string;
-
-  constructor(taskId: string) {
-    super(`Task with id "${taskId}" was not found`);
-    this.name = "TaskNotFound";
-    this.taskId = taskId;
-  }
-}
+import {
+  DESCRIPTION_MAX_LENGTH,
+  TASK_STATUSES,
+  TITLE_MAX_LENGTH,
+  type ParsedCreateTaskInput,
+  type TaskStatus,
+  type UpdateTaskInput,
+} from "./entity";
+import { ValidationFailed, type FieldErrors } from "./errors";
 
 const CREATE_ALLOWED_KEYS = new Set(["title", "description"]);
 const UPDATE_ALLOWED_KEYS = new Set(["id", "title", "description", "status"]);

@@ -6,7 +6,7 @@ import {
   TaskNotFound,
   ValidationError,
   ValidationFailed,
-} from "./task";
+} from ".";
 
 function captureValidationError(fn: () => unknown): ValidationFailed {
   let caught: unknown;
