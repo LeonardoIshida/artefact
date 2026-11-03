@@ -1,4 +1,27 @@
-import type { ParsedCreateTaskInput, Task, UpdateTaskInput } from "./entity";
+import type {
+  ParsedCreateTaskInput,
+  Task,
+  TaskStatus,
+  UpdateTaskInput,
+} from "./entity";
+
+export interface TaskPageInput {
+  status: TaskStatus;
+  cursor?: string | null;
+}
+
+/** One bounded result page and the opaque position for continuing it. */
+export interface TaskPage {
+  items: Task[];
+  nextCursor: string | null;
+}
+
+export class InvalidTaskCursor extends Error {
+  constructor() {
+    super("Invalid task cursor");
+    this.name = "InvalidTaskCursor";
+  }
+}
 
 /**
  * The domain-validated payload for replacing a task's editable state (PUT).
@@ -18,8 +41,12 @@ export type UpdateTaskPayload = Omit<UpdateTaskInput, "id">;
  * drop-in replacement.
  */
 export interface TaskRepository {
-  /** All tasks, ordered by `updatedAt` descending (edits float to top). */
-  list(): Promise<Task[]>;
+  /**
+   * Returns up to 10 tasks for a status in `updatedAt`-descending order, with
+   * later insertions first on ties. An invalid or cross-status cursor throws
+   * `InvalidTaskCursor`.
+   */
+  listPage(input: TaskPageInput): Promise<TaskPage>;
 
   /** Returns the task or throws `TaskNotFound` when missing. */
   get(id: string): Promise<Task>;

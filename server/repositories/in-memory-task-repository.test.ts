@@ -1,18 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryTaskRepository } from "./in-memory-task-repository";
 import { TaskNotFound } from "../../shared/task/errors";
 import type { ParsedCreateTaskInput } from "../../shared/task";
+import { InvalidTaskCursor } from "../../shared/task/repository";
 
 const baseCreateInput: ParsedCreateTaskInput = {
   title: "Test task",
   description: null,
 };
 
+async function listAllStatusPages(repo: InMemoryTaskRepository) {
+  const pages = await Promise.all(
+    (["todo", "in_progress", "done"] as const).map((status) =>
+      repo.listPage({ status }),
+    ),
+  );
+  return pages.flatMap((page) => page.items);
+}
+
 describe("InMemoryTaskRepository", () => {
   describe("seeding", () => {
     it("seeds 3 tasks with todo/in_progress/done on construction by default", async () => {
       const repo = new InMemoryTaskRepository();
-      const tasks = await repo.list();
+      const tasks = await listAllStatusPages(repo);
       expect(tasks).toHaveLength(3);
       const statuses = tasks.map((task) => task.status).sort();
       expect(statuses).toEqual(["done", "in_progress", "todo"]);
@@ -20,7 +30,7 @@ describe("InMemoryTaskRepository", () => {
 
     it("seeds one todo without description and two with descriptions", async () => {
       const repo = new InMemoryTaskRepository();
-      const tasks = await repo.list();
+      const tasks = await listAllStatusPages(repo);
       const withoutDescription = tasks.filter((task) => task.description === null);
       expect(withoutDescription).toHaveLength(1);
       expect(withoutDescription[0].status).toBe("todo");
@@ -28,21 +38,16 @@ describe("InMemoryTaskRepository", () => {
       expect(withDescription).toHaveLength(2);
     });
 
-    it("seeds tasks with staggered updatedAt so ordering is visible", async () => {
+    it("seeds tasks with staggered updatedAt values", async () => {
       const repo = new InMemoryTaskRepository();
-      const tasks = await repo.list();
+      const tasks = await listAllStatusPages(repo);
       const timestamps = tasks.map((task) => task.updatedAt);
-      // descending
-      for (let i = 1; i < timestamps.length; i++) {
-        expect(timestamps[i - 1] >= timestamps[i]).toBe(true);
-      }
-      // not all identical
       expect(new Set(timestamps).size).toBeGreaterThan(1);
     });
 
     it("does not seed when constructed with seed: false", async () => {
       const repo = new InMemoryTaskRepository({ seed: false });
-      const tasks = await repo.list();
+      const tasks = await listAllStatusPages(repo);
       expect(tasks).toHaveLength(0);
     });
   });
@@ -136,7 +141,7 @@ describe("InMemoryTaskRepository", () => {
       await new Promise((resolve) => setTimeout(resolve, 2));
       const b = await repo.create({ title: "B", description: null });
 
-      const tasks = await repo.list();
+      const tasks = (await repo.listPage({ status: "todo" })).items;
       expect(tasks[0].id).toBe(b.id);
       expect(tasks[1].id).toBe(a.id);
     });
@@ -150,29 +155,90 @@ describe("InMemoryTaskRepository", () => {
       await new Promise((resolve) => setTimeout(resolve, 2));
       await repo.update(a.id, { title: "A edited", description: null, status: "todo" });
 
-      const tasks = await repo.list();
+      const tasks = (await repo.listPage({ status: "todo" })).items;
       expect(tasks[0].id).toBe(a.id);
     });
 
     it("breaks same-millisecond ties by later insertion first", async () => {
-      const repo = new InMemoryTaskRepository({ seed: false });
-      // Insert two tasks synchronously (same millisecond possible); rely on seq tiebreak.
-      const a = await repo.create({ title: "A", description: null });
-      const b = await repo.create({ title: "B", description: null });
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      try {
+        const repo = new InMemoryTaskRepository({ seed: false });
+        await repo.create({ title: "A", description: null });
+        await repo.create({ title: "B", description: null });
 
-      // Force identical updatedAt by updating both in same tick is not possible deterministically;
-      // instead verify the tiebreak never produces undefined and list is stable.
-      const tasks = await repo.list();
-      expect(tasks).toHaveLength(2);
-      // later insertion (b) appears before (a) when timestamps tie; if timestamps differ, order by updatedAt.
-      const [first, second] = tasks;
-      if (first.updatedAt === second.updatedAt) {
-        expect(first.id).toBe(b.id);
-      } else {
-        expect(first.updatedAt >= second.updatedAt).toBe(true);
+        const page = await repo.listPage({ status: "todo" });
+
+        expect(page.items.map((task) => task.title)).toEqual(["B", "A"]);
+      } finally {
+        vi.useRealTimers();
       }
-      // suppress unused var lint
-      void a;
+    });
+  });
+
+  describe("pagination", () => {
+    it("returns only tasks from the requested status", async () => {
+      const repo = new InMemoryTaskRepository({ seed: false });
+      await repo.create({ title: "Todo task", description: null });
+      const active = await repo.create({ title: "Active task", description: null });
+      await repo.update(active.id, {
+        title: "Active task",
+        description: null,
+        status: "in_progress",
+      });
+
+      const page = await repo.listPage({ status: "in_progress" });
+
+      expect(page.items.map(({ title, status }) => ({ title, status }))).toEqual([
+        { title: "Active task", status: "in_progress" },
+      ]);
+      expect(page.nextCursor).toBeNull();
+    });
+
+    it("continues after the tenth task while preserving same-time insertion order", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      try {
+        const repo = new InMemoryTaskRepository({ seed: false });
+        for (let index = 1; index <= 11; index += 1) {
+          await repo.create({
+            title: `Task ${String(index).padStart(2, "0")}`,
+            description: null,
+          });
+        }
+
+        const firstPage = await repo.listPage({ status: "todo" });
+        const secondPage = await repo.listPage({
+          status: "todo",
+          cursor: firstPage.nextCursor,
+        });
+
+        expect(firstPage.items.map((task) => task.title)).toEqual([
+          "Task 11",
+          "Task 10",
+          "Task 09",
+          "Task 08",
+          "Task 07",
+          "Task 06",
+          "Task 05",
+          "Task 04",
+          "Task 03",
+          "Task 02",
+        ]);
+        expect(typeof firstPage.nextCursor).toBe("string");
+        expect(secondPage.items.map((task) => task.title)).toEqual(["Task 01"]);
+        expect(secondPage.nextCursor).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("rejects a malformed cursor through the repository seam", async () => {
+      const repo = new InMemoryTaskRepository({ seed: false });
+
+      await expect(
+        repo.listPage({ status: "todo", cursor: "not-a-cursor" }),
+      ).rejects.toBeInstanceOf(InvalidTaskCursor);
     });
   });
 });

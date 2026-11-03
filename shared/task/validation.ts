@@ -7,9 +7,11 @@ import {
   type UpdateTaskInput,
 } from "./entity";
 import { ValidationFailed, type FieldErrors } from "./errors";
+import type { TaskPageInput } from "./repository";
 
 const CREATE_ALLOWED_KEYS = new Set(["title", "description"]);
 const UPDATE_ALLOWED_KEYS = new Set(["id", "title", "description", "status"]);
+const LIST_ALLOWED_KEYS = new Set(["status", "cursor", "direction"]);
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -22,6 +24,46 @@ function isValidTaskStatus(value: unknown): value is TaskStatus {
     typeof value === "string" &&
     (TASK_STATUSES as readonly string[]).includes(value)
   );
+}
+
+/** Validates a lane-page query and strips tRPC's direction metadata. */
+export function parseTaskPageInput(input: unknown): TaskPageInput {
+  if (!isPlainObject(input)) {
+    throw new ValidationFailed({
+      status: `Status must be one of: ${TASK_STATUSES.join(", ")}`,
+    });
+  }
+
+  const fieldErrors: FieldErrors = {};
+  collectUnknownKeyErrors(input, LIST_ALLOWED_KEYS, fieldErrors);
+
+  const status = isValidTaskStatus(input.status) ? input.status : null;
+  if (status === null) {
+    fieldErrors.status = `Status must be one of: ${TASK_STATUSES.join(", ")}`;
+  }
+
+  let cursor: string | null | undefined;
+  if (input.cursor !== undefined) {
+    if (input.cursor !== null && typeof input.cursor !== "string") {
+      fieldErrors.cursor = "Cursor must be a string or null";
+    } else {
+      cursor = input.cursor;
+    }
+  }
+
+  if (
+    input.direction !== undefined &&
+    input.direction !== "forward" &&
+    input.direction !== "backward"
+  ) {
+    fieldErrors.direction = "Direction must be forward or backward";
+  }
+
+  if (Object.keys(fieldErrors).length > 0 || status === null) {
+    throw new ValidationFailed(fieldErrors);
+  }
+
+  return cursor === undefined ? { status } : { status, cursor };
 }
 
 function validateUuid(value: unknown): string | null {

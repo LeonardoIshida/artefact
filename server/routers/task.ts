@@ -2,12 +2,15 @@ import { TRPCError } from "@trpc/server";
 import {
   isPlainObject,
   parseCreateTaskInput,
+  parseTaskPageInput,
   parseTaskId,
   parseUpdateTaskInput,
+  InvalidTaskCursor,
   TaskNotFound,
   ValidationError,
   type ParsedCreateTaskInput,
   type UpdateTaskInput,
+  type TaskPageInput,
 } from "../../shared/task";
 import { publicProcedure, router, toStandardSchema } from "../trpc";
 
@@ -17,6 +20,9 @@ function toTRPCError(error: unknown): never {
       code: "NOT_FOUND",
       message: `Task not found: ${error.taskId}`,
     });
+  }
+  if (error instanceof InvalidTaskCursor) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
   }
   throw error;
 }
@@ -55,10 +61,18 @@ const updateInput = toStandardSchema<
   { id: string; title: string; description: string | null; status: UpdateTaskInput["status"] },
   UpdateTaskInput
 >(parseUpdateTaskInput);
+const taskPageInput = toStandardSchema<
+  TaskPageInput & { direction?: "forward" | "backward" },
+  TaskPageInput
+>(parseTaskPageInput);
 
 export const taskRouter = router({
-  list: publicProcedure.query(async ({ ctx }) => {
-    return ctx.repository.list();
+  list: publicProcedure.input(taskPageInput).query(async ({ ctx, input }) => {
+    try {
+      return await ctx.repository.listPage(input);
+    } catch (error) {
+      toTRPCError(error);
+    }
   }),
 
   get: publicProcedure.input(idInput).query(async ({ ctx, input }) => {
