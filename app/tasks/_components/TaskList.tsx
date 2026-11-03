@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/app/providers";
 import type { Task, TaskStatus } from "@/shared/task";
 import TransientMessage from "@/components/TransientMessage";
@@ -38,35 +38,38 @@ export default function TaskList() {
     { getNextPageParam: (page) => page.nextCursor ?? undefined, initialCursor: null },
   );
 
-  const lanes: Record<TaskStatus, LaneState> = {
-    todo: {
-      tasks: todoQuery.data?.pages.flatMap((p: { items: Task[] }) => p.items) ?? [],
-      isFetchingNextPage: todoQuery.isFetchingNextPage,
-      hasNextPage: todoQuery.hasNextPage ?? false,
-      isError: todoQuery.isError,
-      error: (todoQuery.error as Error | null),
-      fetchNextPage: () => { void todoQuery.fetchNextPage(); },
-      refetch: () => { void todoQuery.refetch(); },
-    },
-    in_progress: {
-      tasks: inProgressQuery.data?.pages.flatMap((p: { items: Task[] }) => p.items) ?? [],
-      isFetchingNextPage: inProgressQuery.isFetchingNextPage,
-      hasNextPage: inProgressQuery.hasNextPage ?? false,
-      isError: inProgressQuery.isError,
-      error: (inProgressQuery.error as Error | null),
-      fetchNextPage: () => { void inProgressQuery.fetchNextPage(); },
-      refetch: () => { void inProgressQuery.refetch(); },
-    },
-    done: {
-      tasks: doneQuery.data?.pages.flatMap((p: { items: Task[] }) => p.items) ?? [],
-      isFetchingNextPage: doneQuery.isFetchingNextPage,
-      hasNextPage: doneQuery.hasNextPage ?? false,
-      isError: doneQuery.isError,
-      error: (doneQuery.error as Error | null),
-      fetchNextPage: () => { void doneQuery.fetchNextPage(); },
-      refetch: () => { void doneQuery.refetch(); },
-    },
-  };
+  const lanes: Record<TaskStatus, LaneState> = useMemo(
+    () => ({
+      todo: {
+        tasks: todoQuery.data?.pages.flatMap((p: { items: Task[] }) => p.items) ?? [],
+        isFetchingNextPage: todoQuery.isFetchingNextPage,
+        hasNextPage: todoQuery.hasNextPage ?? false,
+        isError: todoQuery.isError,
+        error: (todoQuery.error as Error | null),
+        fetchNextPage: () => { void todoQuery.fetchNextPage(); },
+        refetch: () => { void todoQuery.refetch(); },
+      },
+      in_progress: {
+        tasks: inProgressQuery.data?.pages.flatMap((p: { items: Task[] }) => p.items) ?? [],
+        isFetchingNextPage: inProgressQuery.isFetchingNextPage,
+        hasNextPage: inProgressQuery.hasNextPage ?? false,
+        isError: inProgressQuery.isError,
+        error: (inProgressQuery.error as Error | null),
+        fetchNextPage: () => { void inProgressQuery.fetchNextPage(); },
+        refetch: () => { void inProgressQuery.refetch(); },
+      },
+      done: {
+        tasks: doneQuery.data?.pages.flatMap((p: { items: Task[] }) => p.items) ?? [],
+        isFetchingNextPage: doneQuery.isFetchingNextPage,
+        hasNextPage: doneQuery.hasNextPage ?? false,
+        isError: doneQuery.isError,
+        error: (doneQuery.error as Error | null),
+        fetchNextPage: () => { void doneQuery.fetchNextPage(); },
+        refetch: () => { void doneQuery.refetch(); },
+      },
+    }),
+    [todoQuery, inProgressQuery, doneQuery],
+  );
 
   const deleteMutation = trpc.tasks.delete.useMutation();
   const updateMutation = trpc.tasks.update.useMutation();
