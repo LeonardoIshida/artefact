@@ -48,7 +48,7 @@ Keep SSR for the first page of each status lane, then fetch additional pages ind
 - A single page-wide cursor that pages tasks across statuses.
 - Task-count badges or total-count queries.
 - Client-side slicing of the full task list, search, or additional filters.
-- Virtualization, drag-and-drop, or a new end-of-list summary.
+- Virtualization or a new end-of-list summary. Drag-and-drop between columns is defined by Frontend Spec 09 and is supported alongside infinite scroll via mutation lane resets.
 - End-to-end browser tests requiring a new test framework.
 
 ## Further Notes

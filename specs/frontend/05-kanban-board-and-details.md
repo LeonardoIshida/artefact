@@ -41,7 +41,7 @@ A four-column Kanban board (New Task, To Do, In Progress, Done) at `/tasks`. Eac
 - **Component organization**: Route-specific components under `app/tasks/_components/`: `TaskBoard`, `TaskCard`, `TaskDetailDialog`, `DeleteTaskDialog`. Shared components (`AppHeader`) in `components/`.
 - **Status badge colors**: todo = gray/neutral, in_progress = blue, done = green. Consistent with the foundation spec.
 - **Responsive**: Desktop: 4 columns side-by-side (CSS grid, `grid-cols-4` or flex with min-width). Mobile: columns stack vertically, each full-width. No horizontal scrolling.
-- **No drag-and-drop**: Status changes happen via the edit form (pencil → edit page → status select → save). Drag-and-drop is deferred to a future feature.
+- **Drag-and-drop**: Status changes can happen via drag-and-drop between the three status columns (Frontend Spec 09) or via the edit form (pencil → edit page → status select → save). The edit form remains the accessible fallback.
 
 ## Testing Decisions
 
@@ -52,7 +52,7 @@ A four-column Kanban board (New Task, To Do, In Progress, Done) at `/tasks`. Eac
 
 ## Out of Scope
 
-- Drag-and-drop between columns (deferred).
+- Drag-and-drop between columns is defined by Frontend Spec 09; this spec's deferral is superseded.
 - Task filtering or search. Pagination and infinite-scroll behavior are defined by Frontend Spec 08; this spec's pagination exclusion is superseded.
 - Animations or transitions beyond shadcn defaults.
 - Dark mode.
@@ -64,3 +64,4 @@ A four-column Kanban board (New Task, To Do, In Progress, Done) at `/tasks`. Eac
 - The original PT-BR requirements are preserved under `specs/source/`.
 - The detail dialog uses the task data already loaded for the board (no additional fetch). The edit pencil navigates to `/tasks/[id]/edit` which fetches the task via SSR.
 - `specs/frontend/08-task-infinite-scroll.md` supersedes the task-count and pagination decisions here while retaining this spec's board layout, card, detail, and delete behavior.
+- `specs/frontend/09-task-drag-and-drop.md` defines drag-and-drop between status columns and supersedes this spec's former drag-and-drop deferral.
