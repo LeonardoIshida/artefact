@@ -117,26 +117,35 @@ export class InMemoryTaskRepository implements TaskRepository {
 
   private seed(): void {
     const base = Date.now();
+    // Seed enough "todo" tasks to exceed one page (PAGE_SIZE) so the board's
+    // incremental loading can be exercised out of the box; the other statuses
+    // keep a single task each.
     const seeds: Array<{
       title: string;
       description: string | null;
       status: Task["status"];
       offsetMs: number;
-    }> = [
-      { title: "Seed task: todo", description: null, status: "todo", offsetMs: 2 * 60 * 1000 },
-      {
-        title: "Seed task: in progress",
-        description: "A task currently being worked on.",
-        status: "in_progress",
-        offsetMs: 1 * 60 * 1000,
-      },
-      {
-        title: "Seed task: done",
-        description: "A task that has been completed.",
-        status: "done",
-        offsetMs: 0,
-      },
-    ];
+    }> = [];
+    for (let index = 1; index <= 15; index += 1) {
+      seeds.push({
+        title: `Seed task: todo ${index}`,
+        description: null,
+        status: "todo",
+        offsetMs: (16 - index) * 60 * 1000,
+      });
+    }
+    seeds.push({
+      title: "Seed task: in progress",
+      description: "A task currently being worked on.",
+      status: "in_progress",
+      offsetMs: 0,
+    });
+    seeds.push({
+      title: "Seed task: done",
+      description: "A task that has been completed.",
+      status: "done",
+      offsetMs: 0,
+    });
 
     for (const seed of seeds) {
       const timestamp = new Date(base - seed.offsetMs).toISOString();

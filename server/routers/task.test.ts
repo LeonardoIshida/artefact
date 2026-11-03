@@ -23,8 +23,9 @@ describe("tasks.list", () => {
 
     const page = await caller.tasks.list({ status: "todo" });
 
-    expect(page.items.map((task) => task.status)).toEqual(["todo"]);
-    expect(page.nextCursor).toBeNull();
+    expect(page.items).toHaveLength(10);
+    expect(page.items.every((task) => task.status === "todo")).toBe(true);
+    expect(typeof page.nextCursor).toBe("string");
   });
 
   it("accepts the paging metadata supplied by the infinite-query hook", async () => {
@@ -35,7 +36,8 @@ describe("tasks.list", () => {
       direction: "forward",
     });
 
-    expect(page.items.map((task) => task.status)).toEqual(["todo"]);
+    expect(page.items).toHaveLength(10);
+    expect(page.items.every((task) => task.status === "todo")).toBe(true);
   });
 
   it("treats a null cursor as the first page", async () => {
@@ -43,8 +45,9 @@ describe("tasks.list", () => {
 
     const page = await caller.tasks.list({ status: "todo", cursor: null });
 
-    expect(page.items.map((task) => task.status)).toEqual(["todo"]);
-    expect(page.nextCursor).toBeNull();
+    expect(page.items).toHaveLength(10);
+    expect(page.items.every((task) => task.status === "todo")).toBe(true);
+    expect(typeof page.nextCursor).toBe("string");
   });
 
   it("requires a status", async () => {
