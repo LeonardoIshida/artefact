@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Artefact — Task Manager
 
-## Getting Started
+A simple Next.js task manager. Tasks are kept in memory on the server (no database) and exposed to the frontend through tRPC.
 
-First, run the development server:
+## Features
+
+- Kanban board grouped by status: **To do**, **In progress**, **Done**, plus a persistent **New Task** column.
+- Create, edit, and delete tasks with inline validation and feedback.
+- Server-side rendering of the first page of each status lane, with incremental (infinite) loading as you scroll.
+- Drag and drop tasks between columns (desktop).
+- Custom tags (name + color) on tasks.
+- Accessible UI (skip link, focus management, ARIA, reduced motion, error/loading states).
+
+## Tech stack
+
+- Next.js 16 (App Router), React 19, TypeScript
+- tRPC 11 + TanStack React Query 5
+- Tailwind CSS 4, shadcn/ui components
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20+
+- pnpm (the project pins `pnpm@12.16.1`)
+
+### Install
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Run in development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000). The app redirects `/` to `/tasks`.
 
-## Learn More
+### Run tests
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm test
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Lint
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm lint
+```
 
-## Deploy on Vercel
+### Production build
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm build
+pnpm start
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## How it works
+
+- **Backend** (`server/`): a tRPC router (`tasks`) wraps a `TaskRepository` interface implemented by an in-memory adapter (`server/repositories/in-memory-task-repository.ts`). Tasks are seeded with three sample tasks on first boot. The adapter is instantiated in a single composition point (`server/composition.ts`).
+- **Domain** (`shared/task/`): entity, validation (hand-rolled, no zod), errors, and the repository interface. Validation is pure and framework-free.
+- **SSR** (`server/prefetch.tsx`, `app/tasks/page.tsx`): the list page prefetches the first page of each status lane on the server and hydrates the React Query cache.
+- **Frontend** (`app/tasks/`): `TaskList` holds one infinite query per status lane; `TaskBoard` renders columns, cards, detail/delete dialogs, and drag-and-drop.
+
+## Project structure
+
+- `app/` — Next.js pages, layouts, components, route handlers.
+- `server/` — tRPC init, routers, repositories, composition, SSR helpers.
+- `shared/` — framework-free domain code (entity, errors, repository, validation).
+- `specs/` — feature specifications.
+- `public/` — static assets.
+
+## Notes
+
+- Data is in-memory: restarting the dev server resets tasks to the seeded state.
+- Drag-and-drop is pointer-only (keyboard status changes remain available via the edit form).
