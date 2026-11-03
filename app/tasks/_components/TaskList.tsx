@@ -20,6 +20,7 @@ export interface LaneState {
 export default function TaskList() {
   const [transient, setTransient] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
   const [retryDeleteId, setRetryDeleteId] = useState<string | null>(null);
   const utils = trpc.useUtils();
 
@@ -68,6 +69,7 @@ export default function TaskList() {
   };
 
   const deleteMutation = trpc.tasks.delete.useMutation();
+  const updateMutation = trpc.tasks.update.useMutation();
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
@@ -87,6 +89,29 @@ export default function TaskList() {
       setRetryDeleteId(id);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleMove = async (task: Task, newStatus: TaskStatus) => {
+    setMovingId(task.id);
+    try {
+      await updateMutation.mutateAsync({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        status: newStatus,
+      });
+      await Promise.all([
+        utils.tasks.list.reset({ status: "todo" }),
+        utils.tasks.list.reset({ status: "in_progress" }),
+        utils.tasks.list.reset({ status: "done" }),
+      ]);
+      setTransient({ kind: "success", message: "Task moved" });
+    } catch (error) {
+      const parsed = parseTrpcError(error);
+      setTransient({ kind: "error", message: parsed.message });
+    } finally {
+      setMovingId(null);
     }
   };
 
@@ -111,7 +136,9 @@ export default function TaskList() {
       <TaskBoard
         lanes={lanes}
         deletingId={deletingId}
+        movingId={movingId}
         onDelete={handleDelete}
+        onMoveTask={handleMove}
       />
     </div>
   );

@@ -4,11 +4,23 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  rectIntersection,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
   Card,
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
 import { TASK_STATUS_LABELS } from "@/lib/task-status-labels";
+import { cn } from "@/lib/utils";
 import type { Task, TaskStatus } from "@/shared/task";
 import type { LaneState } from "./TaskList";
 import DeleteTaskDialog from "./DeleteTaskDialog";
@@ -19,7 +31,9 @@ import Spinner from "@/components/Spinner";
 interface TaskBoardProps {
   lanes: Record<TaskStatus, LaneState>;
   deletingId: string | null;
+  movingId: string | null;
   onDelete: (taskId: string) => Promise<void>;
+  onMoveTask: (task: Task, newStatus: TaskStatus) => Promise<void>;
 }
 
 const STATUS_COLUMNS: { status: TaskStatus; label: string }[] = [
@@ -134,13 +148,63 @@ function LaneSentinel({
   );
 }
 
+function DroppableColumn({
+  status,
+  containerRef,
+  children,
+}: {
+  status: TaskStatus;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+  const refCallback = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    containerRef.current = node;
+  };
+  return (
+    <CardContent
+      ref={refCallback}
+      className={cn(
+        "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto",
+        isOver && "ring-2 ring-primary bg-primary/5",
+      )}
+    >
+      {children}
+    </CardContent>
+  );
+}
+
 export default function TaskBoard({
   lanes,
   deletingId,
+  movingId,
   onDelete,
+  onMoveTask,
 }: TaskBoardProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const task = event.active.data.current?.task as Task | undefined;
+    setActiveTask(task ?? null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const task = event.active.data.current?.task as Task | undefined;
+    const overId = event.over?.id;
+    setActiveTask(null);
+    if (!task || !overId) return;
+    const targetStatus = overId as TaskStatus;
+    if (task.status === targetStatus) return;
+    if (movingId) return;
+    void onMoveTask(task, targetStatus);
+  };
 
   const requestDelete = (task: Task) => {
     setSelectedTask(null);
@@ -163,8 +227,14 @@ export default function TaskBoard({
   };
 
   return (
-    <>
-      <header className="space-y-1.5">
+    <DndContext
+      sensors={sensors}
+      collisionDetection={rectIntersection}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <>
+        <header className="space-y-1.5">
         <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
       </header>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:min-h-0 xl:flex-1 xl:auto-rows-fr xl:grid-cols-[0.75fr_repeat(3,minmax(0,1fr))]">
@@ -201,10 +271,7 @@ export default function TaskBoard({
                     {label}
                   </h2>
                 </CardHeader>
-                <CardContent
-                  ref={containerRefs[status]}
-                  className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto"
-                >
+                <DroppableColumn status={status} containerRef={containerRefs[status]}>
                   {lane.isError && columnTasks.length === 0 ? (
                     <div role="alert" className="text-sm text-destructive">
                       {lane.error?.message ?? "Failed to load tasks"}
@@ -226,6 +293,7 @@ export default function TaskBoard({
                         key={task.id}
                         task={task}
                         isDeleting={deletingId === task.id}
+                        isMoving={movingId === task.id}
                         onOpen={setSelectedTask}
                         onDelete={requestDelete}
                       />
@@ -251,7 +319,7 @@ export default function TaskBoard({
                       <Spinner label={`Loading more ${status} tasks`} />
                     </div>
                   ) : null}
-                </CardContent>
+              </DroppableColumn>
               </Card>
             </section>
           );
@@ -271,6 +339,16 @@ export default function TaskBoard({
           void confirmDelete();
         }}
       />
+      <DragOverlay>
+        {activeTask ? (
+          <div className="w-64 rounded-xl border bg-card p-3 shadow-lg opacity-90">
+            <p className="line-clamp-2 break-words font-medium text-foreground">
+              {activeTask.title}
+            </p>
+          </div>
+        ) : null}
+      </DragOverlay>
     </>
+    </DndContext>
   );
 }

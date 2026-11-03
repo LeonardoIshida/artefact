@@ -17,7 +17,7 @@ describe("TaskCard", () => {
     render(
       <TaskCard
         task={task}
-        isDeleting={false}
+        isDeleting={false} isMoving={false}
         onOpen={vi.fn()}
         onDelete={vi.fn()}
       />,
@@ -40,7 +40,7 @@ describe("TaskCard", () => {
   it("opens task details when its main card action is activated", () => {
     const onOpen = vi.fn();
     render(
-      <TaskCard task={task} isDeleting={false} onOpen={onOpen} onDelete={vi.fn()} />,
+      <TaskCard task={task} isDeleting={false} isMoving={false} onOpen={onOpen} onDelete={vi.fn()} />,
     );
 
     fireEvent.click(
@@ -52,7 +52,7 @@ describe("TaskCard", () => {
 
   it("requests deletion through the task action", () => {
     const onDelete = vi.fn();
-    render(<TaskCard task={task} isDeleting={false} onOpen={vi.fn()} onDelete={onDelete} />);
+    render(<TaskCard task={task} isDeleting={false} isMoving={false} onOpen={vi.fn()} onDelete={onDelete} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Delete task: Plan the release" }));
 
@@ -60,7 +60,7 @@ describe("TaskCard", () => {
   });
 
   it("disables deletion while the task is being deleted", () => {
-    render(<TaskCard task={task} isDeleting onOpen={vi.fn()} onDelete={vi.fn()} />);
+    render(<TaskCard task={task} isDeleting={true} isMoving={false} onOpen={vi.fn()} onDelete={vi.fn()} />);
 
     expect(
       screen.getByRole("button", { name: "Delete task: Plan the release" }),
