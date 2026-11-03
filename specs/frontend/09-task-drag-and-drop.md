@@ -11,7 +11,7 @@ Moving a task between statuses currently requires opening the edit form, changin
 
 ## Solution
 
-Add pointer-driven drag-and-drop between the three status columns using `@dnd-kit/core`. Each card gets a dedicated drag handle; dropping a card onto a column moves the task to that status via the existing `tasks.update` procedure, then resets all lanes. Columns highlight while hovered, and a floating overlay follows the pointer. Mobile keeps the edit-form status change (no drag). The feature is mouse/pointer only; keyboard drag is intentionally deferred.
+Add pointer-driven drag-and-drop between the three status columns using `@dnd-kit/core`. Each card gets a dedicated drag handle; dropping a card onto a column moves the task to that status via the existing `tasks.update` procedure, then resets all lanes. Columns highlight while hovered, and a floating overlay follows the pointer. Drag-and-drop is available on all breakpoints, including phones (columns remain stacked vertically). The feature is mouse/pointer only; keyboard drag is intentionally deferred.
 
 ## User Stories
 
@@ -27,7 +27,7 @@ Add pointer-driven drag-and-drop between the three status columns using `@dnd-ki
 ## Implementation Decisions
 
 - **Dependency**: add `@dnd-kit/core` (and `@dnd-kit/utilities` for transforms). No sortable list package is needed because intra-column reordering is out of scope. No other DnD library.
-- **Desktop only**: enable drag-and-drop at the `xl` breakpoint (columns side-by-side). On smaller breakpoints, render cards without a drag handle and rely on the edit form's status select. This keeps the stacked mobile layout simple.
+- **All breakpoints**: drag-and-drop is enabled on every breakpoint, including phones. Columns remain stacked vertically on small screens and the page acts as the scroll root; the drag handle is always visible. No separate mobile implementation.
 - **Drag source**: a dedicated drag handle (grip icon button) on each `TaskCard`, using `@dnd-kit`'s `useDraggable`. The card's main button still opens the detail dialog; edit/delete buttons remain independently clickable. The handle is the only drag initiator.
 - **Drop targets**: one droppable container per status column (the column's card list area), using `@dnd-kit`'s `useDroppable`. Dropping anywhere in a column moves the task to that status.
 - **Collision detection**: `rectIntersection` from `@dnd-kit/core`, so the hovered column is determined by pointer/column overlap.
@@ -61,7 +61,6 @@ Add pointer-driven drag-and-drop between the three status columns using `@dnd-ki
 
 - Intra-column reordering (would require a new ordering concept beyond `updatedAt`-descending).
 - Keyboard-driven drag-and-drop (deferred; status changes remain available via the edit form). Documented as a WCAG 2.2 AA gap.
-- Mobile/touch drag-and-drop (deferred; mobile uses the edit-form status select).
 - Dragging into the "New Task" column (it is a create affordance, not a status).
 - Backend procedure or repository changes.
 - Animations or transitions beyond shadcn defaults and `@dnd-kit`'s defaults.

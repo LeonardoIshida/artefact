@@ -28,7 +28,7 @@ function makeLanes(tasks: Task[] = []): Record<"todo" | "in_progress" | "done", 
 
 describe("TaskBoard", () => {
   it("keeps the create lane and all status lanes visible when there are no tasks", () => {
-    render(<TaskBoard lanes={makeLanes()} deletingId={null} onDelete={async () => {}} />);
+    render(<TaskBoard lanes={makeLanes()} deletingId={null} movingId={null} onDelete={async () => {}} onMoveTask={async () => {}} />);
 
     expect(screen.getByRole("heading", { name: "Tasks", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "New Task" })).toBeInTheDocument();
@@ -83,7 +83,9 @@ describe("TaskBoard", () => {
       <TaskBoard
         lanes={makeLanes(tasks)}
         deletingId={null}
+        movingId={null}
         onDelete={async () => {}}
+        onMoveTask={async () => {}}
       />,
     );
 
@@ -115,7 +117,7 @@ describe("TaskBoard", () => {
       updatedAt: "2026-11-02T10:00:00.000Z",
     };
     render(
-      <TaskBoard lanes={makeLanes([task])} deletingId={null} onDelete={async () => {}} />,
+      <TaskBoard lanes={makeLanes([task])} deletingId={null} movingId={null} onDelete={async () => {}} onMoveTask={async () => {}} />,
     );
 
     fireEvent.click(
@@ -141,7 +143,7 @@ describe("TaskBoard", () => {
       updatedAt: "2026-11-02T10:00:00.000Z",
     };
     const onDelete = vi.fn(async () => {});
-    render(<TaskBoard lanes={makeLanes([task])} deletingId={null} onDelete={onDelete} />);
+    render(<TaskBoard lanes={makeLanes([task])} deletingId={null} movingId={null} onDelete={onDelete} onMoveTask={async () => {}} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Delete task: Archive project" }));
     expect(screen.getByRole("alertdialog")).toHaveTextContent(
@@ -163,7 +165,7 @@ describe("TaskBoard", () => {
       updatedAt: "2026-11-02T10:00:00.000Z",
     };
     const onDelete = vi.fn(async () => {});
-    render(<TaskBoard lanes={makeLanes([task])} deletingId={null} onDelete={onDelete} />);
+    render(<TaskBoard lanes={makeLanes([task])} deletingId={null} movingId={null} onDelete={onDelete} onMoveTask={async () => {}} />);
 
     fireEvent.click(
       screen.getByRole("button", { name: "View task details: Close the project" }),
