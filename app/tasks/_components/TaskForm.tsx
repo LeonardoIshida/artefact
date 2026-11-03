@@ -147,6 +147,7 @@ function ComparisonField({
 
 export default function TaskForm({ mode, initialTask }: TaskFormProps) {
   const router = useRouter();
+  const utils = trpc.useUtils();
   const isEdit = mode === "edit";
   const initialState = createInitialState(mode, initialTask);
   const [state, setState] = useState<FormState>(() => initialState);
@@ -172,12 +173,26 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
   const navigateAfterSave = () =>
     router.push(`/tasks?feedback=${feedbackQuery}`, { scroll: false });
 
+  const resetLanes = async () => {
+    await Promise.all([
+      utils.tasks.list.reset({ status: "todo" }),
+      utils.tasks.list.reset({ status: "in_progress" }),
+      utils.tasks.list.reset({ status: "done" }),
+    ]);
+  };
+
   const createMutation = trpc.tasks.create.useMutation({
-    onSuccess: navigateAfterSave,
+    onSuccess: async () => {
+      await resetLanes();
+      navigateAfterSave();
+    },
     onError: handleError,
   });
   const updateMutation = trpc.tasks.update.useMutation({
-    onSuccess: navigateAfterSave,
+    onSuccess: async () => {
+      await resetLanes();
+      navigateAfterSave();
+    },
     onError: handleError,
   });
 
