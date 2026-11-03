@@ -30,14 +30,14 @@ A four-column Kanban board (New Task, To Do, In Progress, Done) at `/tasks`. Eac
 
 ## Implementation Decisions
 
-- **Board layout**: Four columns — "New Task" (leftmost), "To Do", "In Progress", "Done". On desktop, all four are side-by-side (responsive grid/flex). On mobile, columns stack vertically. Each column has a header with the status label and task count.
+- **Board layout**: Four columns — "New Task" (leftmost), "To Do", "In Progress", "Done". On desktop, all four are side-by-side (responsive grid/flex). On mobile, columns stack vertically. Each column has a header with its label; task-count badges are removed by Frontend Spec 08.
 - **New Task column**: Always visible as the first column. Contains a prominent "Create task" card/button linking to `/tasks/new`. No task count (it's not a status). This replaces the global empty-state — the board is never fully empty because the New Task column is always present.
 - **Task cards**: Each card shows the title, a status badge (colored per status), and two icon buttons: pencil (edit → opens edit form or detail dialog with edit action) and trash (delete → opens confirmation dialog). No description or timestamps on the card — those appear in the detail dialog. Cards are clickable (main area) to open the detail dialog.
 - **Task detail dialog**: A shadcn `Dialog` opened by clicking a card. Shows the full task: title, description (or "No description"), status badge, `createdAt`, `updatedAt` (formatted via `toLocaleString()`). Contains pencil (edit) and trash (delete) icon buttons. Closing the dialog returns to the board.
 - **Delete confirmation**: The trash icon opens a shadcn `AlertDialog` naming the task ("Delete 'Task title'?"). Buttons: Cancel (secondary) and Delete (destructive). Controls are disabled while the delete request is pending. On success: list refetches + transient success message. On failure: transient error message with the reason.
 - **Empty columns**: Each status column shows a short "No tasks" message when empty. The New Task column is never empty (always has the create button).
 - **Column ordering**: Columns in order: New Task, To Do, In Progress, Done. Within each column, tasks preserve the backend's order (`updatedAt` desc, insertion tiebreak).
-- **SSR preload**: The board page (`/tasks`) is an async Server Component that fetches `task.list` via the tRPC server caller and hydrates the client cache (Spec 05 backend). The board renders with data already in cache (no loading flash).
+- **SSR preload**: The board page (`/tasks`) renders the first page for each status lane via the SSR bridge (Backend Spec 05 and Backend Spec 07), then hydrates the corresponding client state. Frontend Spec 08 defines the paginated cache and continuation behavior; full-list preload is superseded.
 - **Component organization**: Route-specific components under `app/tasks/_components/`: `TaskBoard`, `TaskCard`, `TaskDetailDialog`, `DeleteTaskDialog`. Shared components (`AppHeader`) in `components/`.
 - **Status badge colors**: todo = gray/neutral, in_progress = blue, done = green. Consistent with the foundation spec.
 - **Responsive**: Desktop: 4 columns side-by-side (CSS grid, `grid-cols-4` or flex with min-width). Mobile: columns stack vertically, each full-width. No horizontal scrolling.
@@ -53,7 +53,7 @@ A four-column Kanban board (New Task, To Do, In Progress, Done) at `/tasks`. Eac
 ## Out of Scope
 
 - Drag-and-drop between columns (deferred).
-- Task filtering, search, or pagination.
+- Task filtering or search. Pagination and infinite-scroll behavior are defined by Frontend Spec 08; this spec's pagination exclusion is superseded.
 - Animations or transitions beyond shadcn defaults.
 - Dark mode.
 - Backend changes (storage, procedures, error taxonomy).
@@ -63,3 +63,4 @@ A four-column Kanban board (New Task, To Do, In Progress, Done) at `/tasks`. Eac
 - This spec supersedes the visual and interaction decisions in `specs/frontend/02-task-list.md` (plain `<ul>` list, two-step inline delete confirm, empty state with "No tasks yet."). The CRUD, validation, SSR, and error contracts remain unchanged.
 - The original PT-BR requirements are preserved under `specs/source/`.
 - The detail dialog uses the task data already loaded for the board (no additional fetch). The edit pencil navigates to `/tasks/[id]/edit` which fetches the task via SSR.
+- `specs/frontend/08-task-infinite-scroll.md` supersedes the task-count and pagination decisions here while retaining this spec's board layout, card, detail, and delete behavior.

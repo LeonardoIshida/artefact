@@ -35,7 +35,7 @@ An SSR task list page at `/tasks` (root `/` redirects to it) that fetches `task.
 - **Component organization**: Route-specific components live under the task route as a private folder: `TaskList`, `TaskListItem`, `DeleteTaskButton`. Shared/reusable components go in the top-level `components/` folder (per project Next.js instructions).
 - **Deletion**: `DeleteTaskButton` uses an inline two-step confirm ("Delete?" → [Delete][Cancel]). On success it refetches the list and shows a transient success message; on failure it shows the error reason. Loading state (disabled + spinner) while deleting.
 - **Feedback**: Uses the shared primitives from Spec 01 (frontend): status banner, transient message, loading control.
-- **Backend dependency**: `task.list` (query → `Task[]`) and `task.delete` (mutation, `{ id }` → `Task`), defined by Spec 04.
+- **Backend dependency**: `tasks.list` (status/cursor query → page) is defined by Backend Spec 07; `task.delete` is defined by Backend Spec 04. The original full-list query contract is superseded.
 
 ## Testing Decisions
 
@@ -49,9 +49,10 @@ An SSR task list page at `/tasks` (root `/` redirects to it) that fetches `task.
 - Create/update form and validation (Spec 03 frontend).
 - Feedback primitives themselves (Spec 01 frontend) — consumed here, not defined here.
 - Backend storage and procedure implementation (Specs 01–04 backend).
-- Auth, filtering/grouping, pagination, optimistic updates beyond refetch, and E2E tests.
+- Auth, filtering beyond the status lanes, and optimistic updates beyond refetch. Pagination/infinite scroll is defined by Frontend Spec 08, which supersedes this spec's pagination exclusion. E2E tests remain out of scope.
 
 ## Further Notes
 
 - This spec depends on Spec 01 (frontend) for feedback primitives; implement that first.
 - Timestamps remain ISO strings on the wire; `Date` is constructed only for display.
+- The full-list and pagination decisions here are superseded by `specs/backend/07-task-pagination.md` and `specs/frontend/08-task-infinite-scroll.md`.

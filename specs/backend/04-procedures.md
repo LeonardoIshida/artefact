@@ -15,7 +15,7 @@ A single tRPC task router with five thin procedures — `list`, `get`, `create`,
 
 ## User Stories
 
-1. As an app user, I want to fetch all my tasks in one call, so that the list page can render without multiple round-trips.
+1. As an app user, I want to fetch one ordered page for a task status in one call, so that each Kanban lane can load independently.
 2. As an app user, I want to fetch a single task by id, so that a detail or edit page can load one record.
 3. As an app user, I want to create a task with a title (and optional description), so that I can add new work to my list.
 4. As an app user, I want to update a task's title, description, and status together, so that a single submission replaces the whole editable state.
@@ -33,16 +33,16 @@ A single tRPC task router with five thin procedures — `list`, `get`, `create`,
 ## Implementation Decisions
 
 - **Procedure thickness**: thin wrappers — validate input via `.input()`, call the repository, map errors. No business logic in procedures. The domain module owns rules; the repository owns persistence and stamping; procedures are the wire boundary.
-- **Error mapping**: inline `try/catch` per procedure. `TaskNotFound → TRPCError({ code: "NOT_FOUND", message: "Task not found: <id>" })`; `ValidationFailed → TRPCError({ code: "BAD_REQUEST", message: "Validation failed", cause: <field errors> })`. The custom error formatter (Spec 03) copies `cause` field errors into `data.fieldErrors` so they reach the client.
+- **Error mapping**: inline `try/catch` per procedure. `TaskNotFound → TRPCError({ code: "NOT_FOUND", message: "Task not found: <id>" })`; `ValidationFailed → TRPCError({ code: "BAD_REQUEST", message: "Validation failed", cause: <field errors> })`; `InvalidTaskCursor → BAD_REQUEST` per Backend Spec 07. The custom error formatter (Spec 03) copies `cause` field errors into `data.fieldErrors` so they reach the client.
 - **File organization**: single router file with all five procedures — co-located, ~80 lines, trivially navigable. Re-split when a second entity arrives.
 - **Input contracts** (from Spec 01):
-  - `list`: no input → returns `Task[]` (ordered by `updatedAt` desc, insertion tiebreak)
+  - `list`: `{ status, cursor? }` → returns `{ items, nextCursor }` (page size and cursor rules are defined by Backend Spec 07; this supersedes the original no-input full-list contract)
   - `get`: `{ id: UUID }` → `Task` or `NOT_FOUND`
   - `create`: validated `{ title, description? }` → stored `Task`
   - `update` (PUT): validated `{ id, title, description | null, status }` → stored `Task`
   - `delete`: `{ id: UUID }` → `void`
 - **Malformed vs nonexistent id**: a malformed id fails validation → `BAD_REQUEST` (field error `{ id: "Invalid UUID format" }`); a well-formed but nonexistent id fails lookup → `NOT_FOUND` with the id in the message. Two distinct failure modes, deliberately different.
-- **Strict inputs**: unknown keys rejected (from Spec 01); the validator throws `ValidationFailed` which the procedure maps to `BAD_REQUEST`.
+- **Strict inputs**: unknown keys rejected (from Spec 01); the validator throws `ValidationFailed` which the procedure maps to `BAD_REQUEST`. The `tasks.list` input additionally recognizes only the optional `direction` metadata supplied by the existing tRPC infinite-query hook, as detailed in Backend Spec 07.
 - **Decoupled layering**: procedures live in `server/` and import validators, entity types, and errors from `shared/task/`. The repository also lives in `server/`. `shared/` stays framework-free; `server/` is the wiring layer. Procedures depend on the `TaskRepository` interface type only.
 - **No business logic in procedures**: create delegates id/timestamp stamping to the repository; update delegates `updatedAt` bumping to the repository; validation is the domain module's job via `.input()`.
 - **Mutation return contract**: `create` and `update` return the stored `Task` so the client can update its cache and show feedback without re-fetching. `delete` returns `void` — the client's success signal is the procedure's OK response.
@@ -53,7 +53,7 @@ A single tRPC task router with five thin procedures — `list`, `get`, `create`,
 - A good test exercises external behavior through the public seam — never internals, never mocks of internal collaborators.
 - **Seam**: the `createCaller` (server-side caller from the tRPC router). Tests invoke procedures directly without HTTP, using the real in-memory adapter through the interface. Each procedure's happy path, validation failures (BAD_REQUEST with field errors), and not-found errors (NOT_FOUND) are verified.
 - **Table-driven cases per procedure**:
-  - `list`: returns all tasks in `updatedAt` desc order (tiebreak, edit-floats-to-top); empty array when no tasks.
+  - `list`: returns at most 10 tasks for the requested status in the established order; page boundaries, cursor progression, terminal pages, and invalid cursors are covered by Backend Spec 07.
   - `get`: returns the task for a valid id; `NOT_FOUND` for a well-formed nonexistent id; `BAD_REQUEST` for a malformed id.
   - `create`: returns the stored task with stamped id/timestamps; `BAD_REQUEST` for empty title, whitespace-only title, unknown keys, oversized fields; description normalization (omitted → null, empty → null).
   - `update`: returns the updated task with bumped `updatedAt`; `NOT_FOUND` for nonexistent id; `BAD_REQUEST` for malformed id, invalid title, unknown keys; full-replace semantics (all editable fields required).
@@ -64,7 +64,7 @@ A single tRPC task router with five thin procedures — `list`, `get`, `create`,
 ## Out of Scope
 
 - Client-side cache invalidation strategy (frontend item — React Query `invalidateQueries` after mutations).
-- Pagination, filtering, search, or batch operations.
+- Pagination and status-based lane selection are defined by Backend Spec 07; search, other filters, or batch operations remain out of scope.
 - `tasks.exists`, `tasks.count`, or any convenience procedure.
 - Auth and per-user scoping (deferred).
 - Rate limiting or request throttling.
@@ -75,3 +75,4 @@ A single tRPC task router with five thin procedures — `list`, `get`, `create`,
 - The `createCaller` seam (from Spec 03) means procedure tests run in-process without HTTP — this is the highest seam possible for testing the full validate→repository→error-mapping pipeline.
 - The original PT-BR requirements are preserved under `specs/source/`.
 - Field names translate from the original PT-BR requirements as: `titulo` → `title`, `descricao` → `description`, `dataCriacao` → `createdAt`.
+- `specs/backend/07-task-pagination.md` supersedes this spec's original `tasks.list` input/output and pagination exclusion.
