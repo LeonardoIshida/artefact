@@ -37,7 +37,7 @@ A Task domain module that is the single source of truth for the task entity and 
 
 ## Implementation Decisions
 
-- **Entity**: `Task` has exactly six fields — `id`, `title`, `description`, `status`, `createdAt`, `updatedAt`. Nothing else in v1.
+- **Entity**: `Task` has seven fields — `id`, `title`, `description`, `status`, `tags`, `createdAt`, `updatedAt`. The `tags` field is defined by Frontend Spec 10; nothing else in v1.
 - **id**: UUID string, generated server-side with `crypto.randomUUID()`. Never accepted from client input; every id-bearing input validates UUID shape. The id is the task's permanent identity and can never be reassigned.
 - **title**: string. Trimmed before validation; at least 1 character after trimming (whitespace-only is rejected); at most 200 characters. No uniqueness constraint.
 - **description**: `string | null`. `null` means "no description". Input may omit it or send any string; empty or whitespace-only input normalizes to `null`. At most 2000 characters.
@@ -64,7 +64,7 @@ A Task domain module that is the single source of truth for the task entity and 
 - Storage and persistence: the repository interface and its in-memory adapter (backend item 2).
 - tRPC procedures, route handler, client provider, SSR prefetch (backend items 3–5).
 - Client-side form validation mirroring these rules (frontend items).
-- Any entity fields beyond the six defined here; domain-level status filtering/grouping rules; auth; a real database. Query-time filtering by the existing status enum is defined in Backend Spec 07 and does not change the domain contract.
+- Any entity fields beyond the six defined here plus the `tags` field defined by Frontend Spec 10; domain-level status filtering/grouping rules; auth; a real database. Query-time filtering by the existing status enum is defined in Backend Spec 07 and does not change the domain contract.
 
 ## Further Notes
 
