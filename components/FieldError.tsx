@@ -13,7 +13,11 @@ export default function FieldError({ field, fieldErrors }: FieldErrorProps) {
   if (messages.length === 0) return null;
 
   return (
-    <div role="alert" className="mt-1 space-y-1 text-sm font-medium text-destructive">
+    <div
+      id={`${field}-error`}
+      role="alert"
+      className="mt-1 space-y-1 text-sm font-medium text-destructive"
+    >
       {messages.map((message, index) => (
         <p key={`${index}-${message}`}>{message}</p>
       ))}

@@ -65,8 +65,16 @@ describe("TaskForm (create mode)", () => {
         <TaskForm mode="create" />
       </TRPCProvider>,
     );
+    const title = screen.getByLabelText("Title");
+    expect(title).toBeRequired();
+    expect(title).toHaveAttribute("aria-required", "true");
+
     fireEvent.click(screen.getByRole("button", { name: /create/i }));
-    expect(screen.getByText("Title is required")).toBeInTheDocument();
+    expect(title).toHaveAttribute("aria-invalid", "true");
+    expect(title).toHaveAttribute("aria-describedby", "title-error");
+    expect(document.getElementById("title-error")).toHaveTextContent(
+      "Title is required",
+    );
   });
 
   it("debounces validation while the user is typing", async () => {
@@ -204,5 +212,27 @@ describe("TaskForm (edit mode)", () => {
     expect(screen.getByLabelText("New description")).toHaveValue("2% fat");
     expect(screen.queryByText("Changed")).not.toBeInTheDocument();
     expect(navigation.push).not.toHaveBeenCalled();
+  });
+
+  it("associates invalid edit fields with their error text", () => {
+    render(
+      <TRPCProvider>
+        <TaskForm mode="edit" initialTask={sampleTask} />
+      </TRPCProvider>,
+    );
+    const description = screen.getByLabelText("New description");
+    fireEvent.change(description, {
+      target: { value: "x".repeat(2001) },
+    });
+    fireEvent.blur(description);
+
+    expect(description).toHaveAttribute("aria-invalid", "true");
+    expect(description).toHaveAttribute(
+      "aria-describedby",
+      "description-error",
+    );
+    expect(document.getElementById("description-error")).toHaveTextContent(
+      "Description must be at most 2000 characters",
+    );
   });
 });

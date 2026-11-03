@@ -182,6 +182,8 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
   });
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const hasFieldError = (field: string) =>
+    fieldErrors.some((error) => error.field === field);
   const isTitleChanged =
     isEdit && state.title.trim() !== initialState.title;
   const isDescriptionChanged =
@@ -256,7 +258,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
         </p>
       </header>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form className="space-y-4" noValidate onSubmit={handleSubmit}>
         {banner ? <StatusBanner kind="error" message={banner} onRetry={submit} /> : null}
 
         {isEdit && initialTask ? (
@@ -275,7 +277,12 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
                   value={state.title}
                   onChange={(event) => updateField("title", event.target.value)}
                   onBlur={handleBlur}
-                  aria-invalid={fieldErrors.some((error) => error.field === "title")}
+                  required
+                  aria-required="true"
+                  aria-invalid={hasFieldError("title")}
+                  aria-describedby={
+                    hasFieldError("title") ? "title-error" : undefined
+                  }
                   disabled={isSubmitting}
                 />
               </ComparisonField>
@@ -299,6 +306,11 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
                   aria-invalid={fieldErrors.some(
                     (error) => error.field === "description",
                   )}
+                  aria-describedby={
+                    hasFieldError("description")
+                      ? "description-error"
+                      : undefined
+                  }
                   disabled={isSubmitting}
                 />
               </ComparisonField>
@@ -325,6 +337,9 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
                     aria-invalid={fieldErrors.some(
                       (error) => error.field === "status",
                     )}
+                    aria-describedby={
+                      hasFieldError("status") ? "status-error" : undefined
+                    }
                 >
                   <SelectValue>
                     {STATUS_OPTIONS.find((option) => option.value === state.status)
@@ -352,7 +367,12 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
                   value={state.title}
                   onChange={(event) => updateField("title", event.target.value)}
                   onBlur={handleBlur}
-                  aria-invalid={fieldErrors.some((error) => error.field === "title")}
+                  required
+                  aria-required="true"
+                  aria-invalid={hasFieldError("title")}
+                  aria-describedby={
+                    hasFieldError("title") ? "title-error" : undefined
+                  }
                   disabled={isSubmitting}
                 />
                 <FieldError field="title" fieldErrors={fieldErrors} />
@@ -371,6 +391,11 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
                   aria-invalid={fieldErrors.some(
                     (error) => error.field === "description",
                   )}
+                  aria-describedby={
+                    hasFieldError("description")
+                      ? "description-error"
+                      : undefined
+                  }
                   disabled={isSubmitting}
                 />
                 <FieldError field="description" fieldErrors={fieldErrors} />

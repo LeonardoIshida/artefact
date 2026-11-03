@@ -21,8 +21,8 @@ interface TaskBoardProps {
 }
 
 const STATUS_COLUMNS: { status: TaskStatus; label: string }[] = [
-  { status: "todo", label: "To Do" },
-  { status: "in_progress", label: "In Progress" },
+  { status: "todo", label: TASK_STATUS_LABELS.todo },
+  { status: "in_progress", label: TASK_STATUS_LABELS.in_progress },
   { status: "done", label: TASK_STATUS_LABELS.done },
 ];
 
@@ -51,6 +51,9 @@ export default function TaskBoard({
 
   return (
     <>
+      <header className="space-y-1.5">
+        <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
+      </header>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:min-h-0 xl:flex-1 xl:auto-rows-fr xl:grid-cols-[0.75fr_repeat(3,minmax(0,1fr))]">
         <section
           aria-labelledby="new-task-column-heading"

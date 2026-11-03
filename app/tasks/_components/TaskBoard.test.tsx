@@ -7,13 +7,14 @@ describe("TaskBoard", () => {
   it("keeps the create lane and all status lanes visible when there are no tasks", () => {
     render(<TaskBoard tasks={[]} deletingId={null} onDelete={async () => {}} />);
 
+    expect(screen.getByRole("heading", { name: "Tasks", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "New Task" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Create task" })).toHaveAttribute(
       "href",
       "/tasks/new",
     );
 
-    for (const status of ["To Do", "In Progress", "Done"]) {
+    for (const status of ["To do", "In progress", "Done"]) {
       const column = screen.getByRole("region", { name: status });
       expect(within(column).getByText("No tasks")).toBeInTheDocument();
     }
@@ -63,14 +64,14 @@ describe("TaskBoard", () => {
       />,
     );
 
-    const todoColumn = screen.getByRole("region", { name: "To Do" });
+    const todoColumn = screen.getByRole("region", { name: "To do" });
     expect(
       within(todoColumn)
         .getAllByRole("button", { name: /^View task details:/ })
         .map((button) => button.getAttribute("aria-label")),
     ).toEqual(["View task details: Newest todo", "View task details: Older todo"]);
     expect(
-      within(screen.getByRole("region", { name: "In Progress" })).getByText(
+      within(screen.getByRole("region", { name: "In progress" })).getByText(
         "Review design",
       ),
     ).toBeInTheDocument();
@@ -104,7 +105,7 @@ describe("TaskBoard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "To Do" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "To do" })).toBeInTheDocument();
   });
 
   it("confirms deletion from a card before calling the delete operation", async () => {
