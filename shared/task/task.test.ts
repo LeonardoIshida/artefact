@@ -30,6 +30,7 @@ describe("parseCreateTaskInput", () => {
     expect(result).toEqual({
       title: "Write domain spec",
       description: null,
+      tags: [],
     });
   });
 
@@ -126,6 +127,7 @@ describe("parseUpdateTaskInput", () => {
         title: "  Updated title  ",
         description: "Updated details",
         status,
+        tags: [],
       });
 
       expect(result).toEqual({
@@ -133,6 +135,7 @@ describe("parseUpdateTaskInput", () => {
         title: "Updated title",
         description: "Updated details",
         status,
+        tags: [],
       });
     },
   );
@@ -148,6 +151,7 @@ describe("parseUpdateTaskInput", () => {
       title: "Task",
       description,
       status: "in_progress",
+      tags: [],
     });
 
     expect(result.description).toBe(expected);
@@ -254,6 +258,7 @@ describe("parseUpdateTaskInput", () => {
       "extra",
       "id",
       "status",
+      "tags",
       "title",
     ]);
   });

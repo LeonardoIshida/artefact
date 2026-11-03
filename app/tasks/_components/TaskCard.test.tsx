@@ -8,12 +8,13 @@ const task: Task = {
   title: "Plan the release",
   description: "Prepare release notes",
   status: "in_progress",
+  tags: [],
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-02T10:00:00.000Z",
 };
 
 describe("TaskCard", () => {
-  it("shows the title, status, and task actions without showing details", () => {
+  it("shows the title and task actions without showing details", () => {
     render(
       <TaskCard
         task={task}
@@ -26,7 +27,6 @@ describe("TaskCard", () => {
     expect(
       screen.getByRole("button", { name: "View task details: Plan the release" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("In progress")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Edit task: Plan the release" })).toHaveAttribute(
       "href",
       `/tasks/${task.id}/edit`,

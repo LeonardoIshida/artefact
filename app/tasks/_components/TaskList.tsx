@@ -100,6 +100,7 @@ export default function TaskList() {
         title: task.title,
         description: task.description,
         status: newStatus,
+        tags: task.tags,
       });
       await Promise.all([
         utils.tasks.list.reset({ status: "todo" }),

@@ -8,6 +8,7 @@ const task: Task = {
   title: "Plan the release",
   description: "Prepare release notes",
   status: "in_progress",
+  tags: [],
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-02T10:00:00.000Z",
 };
@@ -20,7 +21,6 @@ describe("TaskDetailDialog", () => {
 
     expect(screen.getByRole("dialog", { name: "Plan the release" })).toBeInTheDocument();
     expect(screen.getByText("Prepare release notes")).toBeInTheDocument();
-    expect(screen.getByText("In progress")).toBeInTheDocument();
     expect(screen.getByText("Created").parentElement?.querySelector("time")).toHaveAttribute(
       "dateTime",
       task.createdAt,

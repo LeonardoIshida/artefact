@@ -8,6 +8,7 @@ const task: Task = {
   title: "Plan the release",
   description: null,
   status: "todo",
+  tags: [],
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-02T10:00:00.000Z",
 };

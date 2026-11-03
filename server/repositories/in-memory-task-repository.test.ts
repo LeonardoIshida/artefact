@@ -7,6 +7,7 @@ import { InvalidTaskCursor } from "../../shared/task/repository";
 const baseCreateInput: ParsedCreateTaskInput = {
   title: "Test task",
   description: null,
+  tags: [],
 };
 
 async function listAllStatusPages(repo: InMemoryTaskRepository) {
@@ -55,7 +56,7 @@ describe("InMemoryTaskRepository", () => {
   describe("create", () => {
     it("stamps id, createdAt, updatedAt and defaults status to todo", async () => {
       const repo = new InMemoryTaskRepository({ seed: false });
-      const created = await repo.create({ title: "New task", description: "Details" });
+      const created = await repo.create({ title: "New task", description: "Details", tags: [] });
 
       expect(typeof created.id).toBe("string");
       expect(created.id.length).toBeGreaterThan(0);
@@ -96,6 +97,7 @@ describe("InMemoryTaskRepository", () => {
         title: "Updated title",
         description: "Updated description",
         status: "done",
+        tags: [],
       });
 
       expect(updated.id).toBe(created.id);
@@ -113,6 +115,7 @@ describe("InMemoryTaskRepository", () => {
           title: "x",
           description: null,
           status: "todo",
+          tags: [],
         }),
       ).rejects.toBeInstanceOf(TaskNotFound);
     });
@@ -136,10 +139,10 @@ describe("InMemoryTaskRepository", () => {
   describe("ordering", () => {
     it("lists tasks by updatedAt descending", async () => {
       const repo = new InMemoryTaskRepository({ seed: false });
-      const a = await repo.create({ title: "A", description: null });
+      const a = await repo.create({ title: "A", description: null, tags: [] });
       // force distinct timestamp
       await new Promise((resolve) => setTimeout(resolve, 2));
-      const b = await repo.create({ title: "B", description: null });
+      const b = await repo.create({ title: "B", description: null, tags: [] });
 
       const tasks = (await repo.listPage({ status: "todo" })).items;
       expect(tasks[0].id).toBe(b.id);
@@ -148,12 +151,12 @@ describe("InMemoryTaskRepository", () => {
 
     it("floats an edited task to the top", async () => {
       const repo = new InMemoryTaskRepository({ seed: false });
-      const a = await repo.create({ title: "A", description: null });
+      const a = await repo.create({ title: "A", description: null, tags: [] });
       await new Promise((resolve) => setTimeout(resolve, 2));
-      await repo.create({ title: "B", description: null });
+      await repo.create({ title: "B", description: null, tags: [] });
 
       await new Promise((resolve) => setTimeout(resolve, 2));
-      await repo.update(a.id, { title: "A edited", description: null, status: "todo" });
+      await repo.update(a.id, { title: "A edited", description: null, status: "todo", tags: [] });
 
       const tasks = (await repo.listPage({ status: "todo" })).items;
       expect(tasks[0].id).toBe(a.id);
@@ -164,8 +167,8 @@ describe("InMemoryTaskRepository", () => {
       vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
       try {
         const repo = new InMemoryTaskRepository({ seed: false });
-        await repo.create({ title: "A", description: null });
-        await repo.create({ title: "B", description: null });
+        await repo.create({ title: "A", description: null, tags: [] });
+        await repo.create({ title: "B", description: null, tags: [] });
 
         const page = await repo.listPage({ status: "todo" });
 
@@ -179,12 +182,13 @@ describe("InMemoryTaskRepository", () => {
   describe("pagination", () => {
     it("returns only tasks from the requested status", async () => {
       const repo = new InMemoryTaskRepository({ seed: false });
-      await repo.create({ title: "Todo task", description: null });
-      const active = await repo.create({ title: "Active task", description: null });
+      await repo.create({ title: "Todo task", description: null, tags: [] });
+      const active = await repo.create({ title: "Active task", description: null, tags: [] });
       await repo.update(active.id, {
         title: "Active task",
         description: null,
         status: "in_progress",
+        tags: [],
       });
 
       const page = await repo.listPage({ status: "in_progress" });
@@ -204,6 +208,7 @@ describe("InMemoryTaskRepository", () => {
           await repo.create({
             title: `Task ${String(index).padStart(2, "0")}`,
             description: null,
+            tags: [],
           });
         }
 

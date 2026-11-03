@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowRight } from "lucide-react";
 import { trpc } from "@/app/providers";
 import { Badge } from "@/components/ui/badge";
+import { TAG_COLOR_CLASSES } from "@/lib/tag-colors";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,8 +27,11 @@ import {
   parseCreateTaskInput,
   parseUpdateTaskInput,
   ValidationFailed,
+  TAG_COLORS,
   type Task,
+  type TagColor,
   type TaskStatus,
+  type TaskTag,
 } from "@/shared/task";
 import TaskStatusBadge from "./TaskStatusBadge";
 
@@ -35,6 +39,7 @@ interface FormState {
   title: string;
   description: string;
   status: TaskStatus;
+  tags: TaskTag[];
 }
 
 interface TaskFormProps {
@@ -64,10 +69,11 @@ function createInitialState(mode: TaskFormProps["mode"], task?: Task): FormState
       title: task.title,
       description: task.description ?? "",
       status: task.status,
+      tags: task.tags ?? [],
     };
   }
 
-  return { title: "", description: "", status: "todo" };
+  return { title: "", description: "", status: "todo", tags: [] };
 }
 
 function normalizeDescription(value: string): string | null {
@@ -81,13 +87,14 @@ function validate(
 ): ParsedFieldError[] {
   try {
     if (mode === "create") {
-      parseCreateTaskInput({ title: state.title, description: state.description });
+      parseCreateTaskInput({ title: state.title, description: state.description, tags: state.tags });
     } else {
       parseUpdateTaskInput({
         id: taskId,
         title: state.title,
         description: normalizeDescription(state.description),
         status: state.status,
+        tags: state.tags,
       });
     }
     return [];
@@ -154,6 +161,8 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
   const [fieldErrors, setFieldErrors] = useState<ParsedFieldError[]>([]);
   const [banner, setBanner] = useState<string | null>(null);
   const [shouldValidate, setShouldValidate] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [tagColor, setTagColor] = useState<TagColor>("blue");
 
   useEffect(() => {
     if (!shouldValidate) return;
@@ -216,6 +225,32 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
     setBanner(null);
   };
 
+  const addTag = () => {
+    const name = tagInput.trim();
+    if (name === "") return;
+    if (state.tags.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
+      setTagInput("");
+      return;
+    }
+    if (state.tags.length >= 5) return;
+    setState((current) => ({
+      ...current,
+      tags: [...current.tags, { name, color: tagColor }],
+    }));
+    setTagInput("");
+    setShouldValidate(true);
+    setBanner(null);
+  };
+
+  const removeTag = (index: number) => {
+    setState((current) => ({
+      ...current,
+      tags: current.tags.filter((_, i) => i !== index),
+    }));
+    setShouldValidate(true);
+    setBanner(null);
+  };
+
   const submit = () => {
     const errors = validate(mode, initialTask?.id, state);
     setFieldErrors(errors);
@@ -227,6 +262,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
       createMutation.mutate({
         title: state.title,
         description: state.description === "" ? undefined : state.description,
+        tags: state.tags,
       });
       return;
     }
@@ -236,6 +272,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
       title: state.title,
       description: normalizeDescription(state.description),
       status: state.status,
+      tags: state.tags,
     });
   };
 
@@ -419,6 +456,79 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardContent className="space-y-3 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="tag-input">Tags</Label>
+              {isEdit && initialTask && initialTask.tags.length > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Current:{" "}
+                  {initialTask.tags.map((t) => t.name).join(", ")}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  id="tag-input"
+                  value={tagInput}
+                  onChange={(event) => setTagInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === ",") {
+                      event.preventDefault();
+                      addTag();
+                    }
+                    if (event.key === "Backspace" && tagInput === "" && state.tags.length > 0) {
+                      removeTag(state.tags.length - 1);
+                    }
+                  }}
+                  placeholder="Add a tag"
+                  disabled={isSubmitting}
+                  aria-label="Tag name"
+                />
+                <Button type="button" variant="outline" size="sm" onClick={addTag} disabled={isSubmitting}>
+                  Add
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-1">
+                {TAG_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    aria-label={`Tag color ${color}`}
+                    aria-pressed={tagColor === color}
+                    onClick={() => setTagColor(color)}
+                    className={`size-5 rounded-full border ${TAG_COLOR_CLASSES[color]} ${
+                      tagColor === color ? "ring-2 ring-ring" : ""
+                    }`}
+                  />
+                ))}
+              </div>
+              {state.tags.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  {state.tags.map((tag, index) => (
+                    <Badge
+                      key={`${tag.name}-${index}`}
+                      variant="outline"
+                      className={TAG_COLOR_CLASSES[tag.color]}
+                    >
+                      {tag.name}
+                      <button
+                        type="button"
+                        aria-label={`Remove tag ${tag.name}`}
+                        className="ml-1"
+                        onClick={() => removeTag(index)}
+                        disabled={isSubmitting}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+              <FieldError field="tags" fieldErrors={fieldErrors} />
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="flex justify-end gap-3">
           <Button

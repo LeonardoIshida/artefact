@@ -226,6 +226,7 @@ describe("tasks.update", () => {
       title: "Updated",
       description: "New desc",
       status: "done",
+      tags: [],
     });
     expect(updated.id).toBe(created.id);
     expect(updated.title).toBe("Updated");
@@ -243,6 +244,7 @@ describe("tasks.update", () => {
         title: "X",
         description: null,
         status: "todo",
+        tags: [],
       });
       throw new Error("expected throw");
     } catch (error) {
@@ -258,6 +260,7 @@ describe("tasks.update", () => {
         title: "X",
         description: null,
         status: "todo",
+        tags: [],
       });
       throw new Error("expected throw");
     } catch (error) {
@@ -303,6 +306,7 @@ describe("tasks.update", () => {
       title: "T",
       description: "   ",
       status: "todo",
+      tags: [],
     });
     expect(updated.description).toBeNull();
   });
