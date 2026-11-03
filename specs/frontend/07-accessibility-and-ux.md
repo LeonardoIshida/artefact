@@ -58,7 +58,7 @@ A single accessibility-and-UX pass that brings the app to WCAG 2.2 AA and a poli
 
 - Dark mode (deferred; light theme only per Spec 04 frontend).
 - Internationalization / locale switching (deferred).
-- Drag-and-drop Kanban (no drag in current implementation).
+- Keyboard-driven drag-and-drop (deferred; pointer-only DnD is defined by Frontend Spec 09 and is a documented WCAG 2.2 AA gap; status changes remain available via the edit form).
 - Comprehensive E2E tests (Playwright not installed).
 - Color-contrast automated CI (manual audit documented here).
 - Backend changes.
