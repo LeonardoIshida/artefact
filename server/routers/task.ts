@@ -54,11 +54,11 @@ function parseIdEnvelope(input: unknown): { id: string } {
 
 const idInput = toStandardSchema<{ id: string }, { id: string }>(parseIdEnvelope);
 const createInput = toStandardSchema<
-  { title: string; description?: string },
+  { title: string; description?: string; tags?: UpdateTaskInput["tags"] },
   ParsedCreateTaskInput
 >(parseCreateTaskInput);
 const updateInput = toStandardSchema<
-  { id: string; title: string; description: string | null; status: UpdateTaskInput["status"] },
+  { id: string; title: string; description: string | null; status: UpdateTaskInput["status"]; tags: UpdateTaskInput["tags"] },
   UpdateTaskInput
 >(parseUpdateTaskInput);
 const taskPageInput = toStandardSchema<
@@ -93,6 +93,7 @@ export const taskRouter = router({
         title: input.title,
         description: input.description,
         status: input.status,
+        tags: input.tags,
       });
     } catch (error) {
       toTRPCError(error);

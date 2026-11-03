@@ -1,16 +1,21 @@
 import {
   DESCRIPTION_MAX_LENGTH,
+  TAG_COLORS,
+  TAG_NAME_MAX_LENGTH,
+  TAGS_MAX_COUNT,
   TASK_STATUSES,
   TITLE_MAX_LENGTH,
   type ParsedCreateTaskInput,
+  type TagColor,
   type TaskStatus,
+  type TaskTag,
   type UpdateTaskInput,
 } from "./entity";
 import { ValidationFailed, type FieldErrors } from "./errors";
 import type { TaskPageInput } from "./repository";
 
-const CREATE_ALLOWED_KEYS = new Set(["title", "description"]);
-const UPDATE_ALLOWED_KEYS = new Set(["id", "title", "description", "status"]);
+const CREATE_ALLOWED_KEYS = new Set(["title", "description", "tags"]);
+const UPDATE_ALLOWED_KEYS = new Set(["id", "title", "description", "status", "tags"]);
 const LIST_ALLOWED_KEYS = new Set(["status", "cursor", "direction"]);
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -126,6 +131,60 @@ export function parseTaskId(id: unknown): string {
   return validId;
 }
 
+function isValidTagColor(value: unknown): value is TagColor {
+  return typeof value === "string" && (TAG_COLORS as readonly string[]).includes(value);
+}
+
+function validateTags(rawTags: unknown, fieldErrors: FieldErrors): TaskTag[] {
+  if (rawTags === undefined) {
+    return [];
+  }
+  if (!Array.isArray(rawTags)) {
+    fieldErrors.tags = "Tags must be an array";
+    return [];
+  }
+  if (rawTags.length > TAGS_MAX_COUNT) {
+    fieldErrors.tags = `At most ${TAGS_MAX_COUNT} tags are allowed`;
+    return [];
+  }
+
+  const result: TaskTag[] = [];
+  const seen = new Set<string>();
+  let hasError = false;
+  for (const rawTag of rawTags) {
+    if (!isPlainObject(rawTag)) {
+      hasError = true;
+      continue;
+    }
+    const rawName = rawTag.name;
+    const rawColor = rawTag.color;
+    if (typeof rawName !== "string") {
+      hasError = true;
+      continue;
+    }
+    const name = rawName.trim();
+    if (name.length === 0 || name.length > TAG_NAME_MAX_LENGTH) {
+      hasError = true;
+      continue;
+    }
+    if (!isValidTagColor(rawColor)) {
+      hasError = true;
+      continue;
+    }
+    const key = name.toLowerCase();
+    if (seen.has(key)) {
+      hasError = true;
+      continue;
+    }
+    seen.add(key);
+    result.push({ name, color: rawColor });
+  }
+  if (hasError) {
+    fieldErrors.tags = `Each tag needs a name (1-${TAG_NAME_MAX_LENGTH} chars) and a color from: ${TAG_COLORS.join(", ")}`;
+  }
+  return result;
+}
+
 /**
  * Validates and normalizes a raw payload for creating a new task.
  */
@@ -148,6 +207,11 @@ export function parseCreateTaskInput(input: unknown): ParsedCreateTaskInput {
     }
   }
 
+  const tags = validateTags(
+    "tags" in input ? input.tags : undefined,
+    fieldErrors,
+  );
+
   if (Object.keys(fieldErrors).length > 0) {
     throw new ValidationFailed(fieldErrors);
   }
@@ -155,6 +219,7 @@ export function parseCreateTaskInput(input: unknown): ParsedCreateTaskInput {
   return {
     title,
     description,
+    tags,
   };
 }
 
@@ -197,6 +262,13 @@ export function parseUpdateTaskInput(input: unknown): UpdateTaskInput {
     fieldErrors.status = `Status must be one of: ${TASK_STATUSES.join(", ")}`;
   }
 
+  let tags: TaskTag[] = [];
+  if (!("tags" in input) || input.tags === undefined) {
+    fieldErrors.tags = "Tags must be provided (array)";
+  } else {
+    tags = validateTags(input.tags, fieldErrors);
+  }
+
   if (Object.keys(fieldErrors).length > 0) {
     throw new ValidationFailed(fieldErrors);
   }
@@ -206,5 +278,6 @@ export function parseUpdateTaskInput(input: unknown): UpdateTaskInput {
     title,
     description,
     status: input.status as TaskStatus,
+    tags,
   };
 }

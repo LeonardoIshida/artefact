@@ -145,6 +145,7 @@ export class InMemoryTaskRepository implements TaskRepository {
         title: seed.title,
         description: seed.description,
         status: seed.status,
+        tags: [],
         createdAt: timestamp,
         updatedAt: timestamp,
       };
@@ -201,6 +202,7 @@ export class InMemoryTaskRepository implements TaskRepository {
       title: input.title,
       description: input.description,
       status: "todo",
+      tags: input.tags,
       createdAt: now,
       updatedAt: now,
     };
@@ -220,6 +222,7 @@ export class InMemoryTaskRepository implements TaskRepository {
       title: payload.title,
       description: payload.description,
       status: payload.status,
+      tags: payload.tags,
       createdAt: existing.createdAt,
       updatedAt: now,
     };

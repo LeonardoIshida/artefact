@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { GripVertical, Pencil, Trash2 } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { TAG_COLOR_CLASSES } from "@/lib/tag-colors";
 import Spinner from "@/components/Spinner";
 import type { Task } from "@/shared/task";
-import TaskStatusBadge from "./TaskStatusBadge";
 
 interface TaskCardProps {
   task: Task;
@@ -58,7 +59,24 @@ export default function TaskCard({
             <span className="line-clamp-2 break-words font-medium text-foreground">
               {task.title}
             </span>
-            <TaskStatusBadge status={task.status} />
+            {task.tags.length > 0 ? (
+              <span className="flex flex-wrap items-center gap-1">
+                {task.tags.slice(0, 2).map((tag) => (
+                  <Badge
+                    key={tag.name}
+                    variant="outline"
+                    className={TAG_COLOR_CLASSES[tag.color]}
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+                {task.tags.length > 2 ? (
+                  <Badge variant="outline" className="border-muted bg-muted/40 text-muted-foreground">
+                    +{task.tags.length - 2}
+                  </Badge>
+                ) : null}
+              </span>
+            ) : null}
           </span>
         </Button>
 

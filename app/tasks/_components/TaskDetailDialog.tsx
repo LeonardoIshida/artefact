@@ -8,10 +8,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { TAG_COLOR_CLASSES } from "@/lib/tag-colors";
 import type { Task } from "@/shared/task";
-import TaskStatusBadge from "./TaskStatusBadge";
 
 interface TaskDetailDialogProps {
   task: Task | null;
@@ -31,7 +32,19 @@ export default function TaskDetailDialog({
           <DialogHeader>
             <div className="flex flex-wrap items-center gap-3">
               <DialogTitle>{task.title}</DialogTitle>
-              <TaskStatusBadge status={task.status} />
+              {task.tags.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  {task.tags.map((tag) => (
+                    <Badge
+                      key={tag.name}
+                      variant="outline"
+                      className={TAG_COLOR_CLASSES[tag.color]}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
             </div>
             <DialogDescription>
               {task.description ?? "No description"}

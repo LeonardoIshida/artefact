@@ -18,6 +18,7 @@ const sampleTask: Task = {
   title: "Buy milk",
   description: "2% fat",
   status: "in_progress",
+  tags: [],
   createdAt: "2026-11-02T10:00:00.000Z",
   updatedAt: "2026-11-02T10:00:00.000Z",
 };
