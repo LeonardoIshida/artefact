@@ -1,21 +1,23 @@
-import { useState } from "react";
+"use client";
+
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import {
-  CardAction,
   Card,
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
 import { TASK_STATUS_LABELS } from "@/lib/task-status-labels";
 import type { Task, TaskStatus } from "@/shared/task";
+import type { LaneState } from "./TaskList";
 import DeleteTaskDialog from "./DeleteTaskDialog";
 import TaskCard from "./TaskCard";
 import TaskDetailDialog from "./TaskDetailDialog";
+import Spinner from "@/components/Spinner";
 
 interface TaskBoardProps {
-  tasks: Task[];
+  lanes: Record<TaskStatus, LaneState>;
   deletingId: string | null;
   onDelete: (taskId: string) => Promise<void>;
 }
@@ -26,8 +28,114 @@ const STATUS_COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: "done", label: TASK_STATUS_LABELS.done },
 ];
 
+function useLaneInfiniteScroll(
+  status: TaskStatus,
+  lane: LaneState,
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  sentinelRef: React.RefObject<HTMLDivElement | null>,
+) {
+  const fetchingRef = useRef(false);
+
+  const tryFetch = useCallback(() => {
+    if (fetchingRef.current) return;
+    if (!lane.hasNextPage) return;
+    if (lane.isFetchingNextPage) return;
+    fetchingRef.current = true;
+    lane.fetchNextPage();
+  }, [lane]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const isDesktop = () => window.matchMedia("(min-width: 1280px)").matches;
+    const root = isDesktop() ? containerRef.current : null;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            tryFetch();
+          }
+        }
+      },
+      { root, rootMargin: "100px" },
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [lane, containerRef, sentinelRef, status, tryFetch]);
+
+  // Reset fetching lock when fetch completes, and check if sentinel is still visible
+  useEffect(() => {
+    if (lane.isFetchingNextPage) return;
+    fetchingRef.current = false;
+    // If sentinel is still visible, fetch next page
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !lane.hasNextPage) return;
+    const rect = sentinel.getBoundingClientRect();
+    const root = containerRef.current;
+    let inView = false;
+    if (root) {
+      const rootRect = root.getBoundingClientRect();
+      inView = rect.top < rootRect.bottom && rect.bottom > rootRect.top;
+    } else {
+      inView = rect.top < window.innerHeight && rect.bottom > 0;
+    }
+    if (inView) {
+      tryFetch();
+    }
+  }, [lane.isFetchingNextPage, lane.hasNextPage, lane, sentinelRef, containerRef, tryFetch]);
+}
+
+function LaneSentinel({
+  status,
+  lane,
+  containerRef,
+}: {
+  status: TaskStatus;
+  lane: LaneState;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useLaneInfiniteScroll(status, lane, containerRef, sentinelRef);
+
+  if (!lane.hasNextPage) return null;
+
+  return (
+    <div ref={sentinelRef} className="flex flex-col items-center gap-2 py-2">
+      {lane.isFetchingNextPage ? (
+        <Spinner label={`Loading more ${status} tasks`} />
+      ) : (
+        <button
+          type="button"
+          onClick={() => lane.fetchNextPage()}
+          className="text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Load more
+        </button>
+      )}
+      {lane.isError ? (
+        <div role="alert" className="text-sm text-destructive">
+          {lane.error?.message ?? "Failed to load more tasks"}
+          <button
+            type="button"
+            onClick={() => lane.refetch()}
+            className="ml-2 underline"
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function TaskBoard({
-  tasks,
+  lanes,
   deletingId,
   onDelete,
 }: TaskBoardProps) {
@@ -41,12 +149,17 @@ export default function TaskBoard({
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-
     try {
       await onDelete(deleteTarget.id);
     } finally {
       setDeleteTarget(null);
     }
+  };
+
+  const containerRefs = {
+    todo: useRef<HTMLDivElement>(null),
+    in_progress: useRef<HTMLDivElement>(null),
+    done: useRef<HTMLDivElement>(null),
   };
 
   return (
@@ -74,7 +187,8 @@ export default function TaskBoard({
         </section>
 
         {STATUS_COLUMNS.map(({ status, label }) => {
-          const columnTasks = tasks.filter((task) => task.status === status);
+          const lane = lanes[status];
+          const columnTasks = lane.tasks;
 
           return (
             <section key={status} aria-labelledby={`task-column-${status}`}>
@@ -86,17 +200,23 @@ export default function TaskBoard({
                   >
                     {label}
                   </h2>
-                  <CardAction>
-                    <Badge
-                      variant="secondary"
-                      aria-label={`${columnTasks.length} tasks`}
-                    >
-                      {columnTasks.length}
-                    </Badge>
-                  </CardAction>
                 </CardHeader>
-                <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-                  {columnTasks.length === 0 ? (
+                <CardContent
+                  ref={containerRefs[status]}
+                  className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto"
+                >
+                  {lane.isError && columnTasks.length === 0 ? (
+                    <div role="alert" className="text-sm text-destructive">
+                      {lane.error?.message ?? "Failed to load tasks"}
+                      <button
+                        type="button"
+                        onClick={() => lane.refetch()}
+                        className="ml-2 underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : columnTasks.length === 0 ? (
                     <p className="rounded-lg border border-dashed bg-background px-3 py-6 text-center text-sm text-muted-foreground">
                       No tasks
                     </p>
@@ -111,6 +231,26 @@ export default function TaskBoard({
                       />
                     ))
                   )}
+                  {columnTasks.length > 0 && lane.isError ? (
+                    <div role="alert" className="text-sm text-destructive">
+                      {lane.error?.message ?? "Failed to load more tasks"}
+                      <button
+                        type="button"
+                        onClick={() => lane.refetch()}
+                        className="ml-2 underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : null}
+                  {columnTasks.length > 0 ? (
+                    <LaneSentinel status={status} lane={lane} containerRef={containerRefs[status]} />
+                  ) : null}
+                  {lane.isFetchingNextPage && columnTasks.length > 0 ? (
+                    <div className="flex justify-center py-2">
+                      <Spinner label={`Loading more ${status} tasks`} />
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
             </section>

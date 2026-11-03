@@ -19,6 +19,8 @@ interface StandardSchemaV1<Input = unknown, Output = Input> {
     readonly validate: (value: unknown) =>
       | { readonly value: Output; readonly issues?: undefined }
       | { readonly issues: ReadonlyArray<{ readonly message: string; readonly path?: ReadonlyArray<PropertyKey> }> };
+    /** Inferred types associated with the schema (standard-schema spec). */
+    readonly types?: { readonly input: Input; readonly output: Output } | undefined;
   };
 }
 
@@ -69,6 +71,7 @@ export function toStandardSchema<TInput, TOutput>(
         const parsed = parse(value);
         return { value: parsed };
       },
+      types: { input: undefined as unknown as TInput, output: undefined as unknown as TOutput },
     },
   };
 }

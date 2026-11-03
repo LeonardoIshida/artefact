@@ -1,11 +1,34 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Task } from "@/shared/task";
+import type { LaneState } from "./TaskList";
 import TaskBoard from "./TaskBoard";
+
+function makeLane(tasks: Task[] = []): LaneState {
+  return {
+    tasks,
+    isFetchingNextPage: false,
+    hasNextPage: false,
+    isError: false,
+    error: null,
+    fetchNextPage: vi.fn(),
+    refetch: vi.fn(),
+  };
+}
+
+function makeLanes(tasks: Task[] = []): Record<"todo" | "in_progress" | "done", LaneState> {
+  const byStatus: Record<string, Task[]> = { todo: [], in_progress: [], done: [] };
+  for (const t of tasks) byStatus[t.status].push(t);
+  return {
+    todo: makeLane(byStatus.todo),
+    in_progress: makeLane(byStatus.in_progress),
+    done: makeLane(byStatus.done),
+  };
+}
 
 describe("TaskBoard", () => {
   it("keeps the create lane and all status lanes visible when there are no tasks", () => {
-    render(<TaskBoard tasks={[]} deletingId={null} onDelete={async () => {}} />);
+    render(<TaskBoard lanes={makeLanes()} deletingId={null} onDelete={async () => {}} />);
 
     expect(screen.getByRole("heading", { name: "Tasks", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "New Task" })).toBeInTheDocument();
@@ -58,7 +81,7 @@ describe("TaskBoard", () => {
 
     render(
       <TaskBoard
-        tasks={tasks}
+        lanes={makeLanes(tasks)}
         deletingId={null}
         onDelete={async () => {}}
       />,
@@ -92,7 +115,7 @@ describe("TaskBoard", () => {
       updatedAt: "2026-11-02T10:00:00.000Z",
     };
     render(
-      <TaskBoard tasks={[task]} deletingId={null} onDelete={async () => {}} />,
+      <TaskBoard lanes={makeLanes([task])} deletingId={null} onDelete={async () => {}} />,
     );
 
     fireEvent.click(
@@ -118,7 +141,7 @@ describe("TaskBoard", () => {
       updatedAt: "2026-11-02T10:00:00.000Z",
     };
     const onDelete = vi.fn(async () => {});
-    render(<TaskBoard tasks={[task]} deletingId={null} onDelete={onDelete} />);
+    render(<TaskBoard lanes={makeLanes([task])} deletingId={null} onDelete={onDelete} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Delete task: Archive project" }));
     expect(screen.getByRole("alertdialog")).toHaveTextContent(
@@ -140,7 +163,7 @@ describe("TaskBoard", () => {
       updatedAt: "2026-11-02T10:00:00.000Z",
     };
     const onDelete = vi.fn(async () => {});
-    render(<TaskBoard tasks={[task]} deletingId={null} onDelete={onDelete} />);
+    render(<TaskBoard lanes={makeLanes([task])} deletingId={null} onDelete={onDelete} />);
 
     fireEvent.click(
       screen.getByRole("button", { name: "View task details: Close the project" }),
