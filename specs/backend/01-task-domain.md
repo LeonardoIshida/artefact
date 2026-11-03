@@ -64,7 +64,7 @@ A Task domain module that is the single source of truth for the task entity and 
 - Storage and persistence: the repository interface and its in-memory adapter (backend item 2).
 - tRPC procedures, route handler, client provider, SSR prefetch (backend items 3–5).
 - Client-side form validation mirroring these rules (frontend items).
-- Any entity fields beyond the six defined here; status filtering or grouping; auth; a real database.
+- Any entity fields beyond the six defined here; domain-level status filtering/grouping rules; auth; a real database. Query-time filtering by the existing status enum is defined in Backend Spec 07 and does not change the domain contract.
 
 ## Further Notes
 

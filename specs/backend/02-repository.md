@@ -35,7 +35,7 @@ A `TaskRepository` interface defined by the Task domain, implemented by one in-m
 ## Implementation Decisions
 
 - **The `TaskRepository` interface** is the seam. Its contract:
-  - `list(): Promise<Task[]>` — all tasks, ordered by `updatedAt` descending; same-millisecond ties broken by insertion order (later insertion first); edits float tasks to top by design.
+  - `listPage(input: { status: TaskStatus; cursor?: string | null }): Promise<TaskPage>` — up to 10 tasks for one status, ordered by `updatedAt` descending; same-millisecond ties are broken by insertion order (later insertion first). An omitted/null cursor starts the lane; `nextCursor: null` means it is complete. This page contract supersedes the original full-list `list()` contract; see Backend Spec 07 for cursor invariants.
   - `get(id: UUID): Promise<Task>` — throws `TaskNotFound` when missing.
   - `create(input: CreateInput): Promise<Task>` — input is the domain-validated `{ title, description? }`; stamps `id` (`crypto.randomUUID()`), `createdAt` (now, ISO 8601), `updatedAt` (= `createdAt`); returns the stored `Task`.
   - `update(id, payload): Promise<Task>` — payload is the domain-validated PUT `{ title, description, status }`; throws `TaskNotFound` when missing; bumps `updatedAt`; returns the stored `Task`.
@@ -47,7 +47,7 @@ A `TaskRepository` interface defined by the Task domain, implemented by one in-m
 - **Seed data**: on first boot, when the store is empty, seed 3 tasks — one `todo` without description, one `in_progress` with a description, one `done` with a description — with staggered timestamps so the ordering rule is visible immediately. They are ordinary, deletable tasks.
 - **Dependency direction**: everything above the seam (procedures, SSR caller) depends on the `TaskRepository` interface type only, never the concrete adapter. The adapter is instantiated in exactly **one composition point**, so a future DB adapter swaps in one place.
 - **Test double**: the in-memory adapter *is* the test double. Procedure and domain tests use it through the interface; no mocking library, no second fake.
-- **Error taxonomy** (reused from the domain spec): `TaskNotFound → NOT_FOUND`; validation errors map to `BAD_REQUEST` at the procedure boundary. Malformed id is a validation failure; well-formed-but-missing id is a lookup failure.
+- **Error taxonomy** (reused from the domain spec): `TaskNotFound → NOT_FOUND`; validation errors map to `BAD_REQUEST` at the procedure boundary. Malformed id is a validation failure; well-formed-but-missing id is a lookup failure. The repository-specific `InvalidTaskCursor → BAD_REQUEST` error is defined by Backend Spec 07 and does not change the domain error taxonomy.
 - **Dates**: ISO 8601 strings end-to-end; no data transformer on the wire; the UI constructs `Date` only for display.
 - **Ownership**: the repository stamps `id`, `createdAt`, `updatedAt` and nothing else. It accepts only already-validated input from the domain layer; it never re-validates, never normalizes. The domain module owns rules; the repository owns persistence.
 
@@ -62,7 +62,7 @@ A `TaskRepository` interface defined by the Task domain, implemented by one in-m
 
 - tRPC procedures, route handler, client provider, SSR prefetch (backend items 3–5).
 - The real database adapter (deferred; the interface is what makes it a one-place swap).
-- Pagination, filtering by status, or any query beyond `list()` returning all tasks.
+- Pagination and status filtering for lane pages are defined by Backend Spec 07; search, arbitrary filtering, and queries beyond the three status lanes remain out of scope.
 - Auth and per-user scoping.
 - Client-side caching behavior.
 
@@ -72,3 +72,4 @@ A `TaskRepository` interface defined by the Task domain, implemented by one in-m
 - The "if null, use createdAt" fallback was considered and rejected: `updatedAt` is never null (equals `createdAt` at birth), so ordering by `updatedAt` alone is unambiguous.
 - The plain module-level singleton (option A) was chosen deliberately over the `globalThis`-stash pattern; the re-seed-on-reload behavior is a feature for demos and a documented limitation for production, revisited with the DB adapter.
 - Field names translate from the original PT-BR requirements as: `titulo` → `title`, `descricao` → `description`, `dataCriacao` → `createdAt`.
+- The paginated list contract is defined by `specs/backend/07-task-pagination.md`; that spec supersedes this document's original `list()` contract and pagination exclusion.
