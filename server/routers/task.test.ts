@@ -50,7 +50,7 @@ describe("tasks.list", () => {
   it("requires a status", async () => {
     const caller = makeCaller(false);
 
-    await expect(caller.tasks.list({} as unknown)).rejects.toMatchObject({
+    await expect(caller.tasks.list({} as never)).rejects.toMatchObject({
       code: "BAD_REQUEST",
     });
   });
@@ -59,7 +59,7 @@ describe("tasks.list", () => {
     const caller = makeCaller(false);
 
     await expect(
-      caller.tasks.list({ status: "archived" } as unknown),
+      caller.tasks.list({ status: "archived" } as never),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
@@ -67,7 +67,7 @@ describe("tasks.list", () => {
     const caller = makeCaller(false);
 
     await expect(
-      caller.tasks.list({ status: "todo", limit: 20 } as unknown),
+      caller.tasks.list({ status: "todo", limit: 20 } as never),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
@@ -144,7 +144,7 @@ describe("tasks.get", () => {
     const caller = makeCaller(false);
     const created = await caller.tasks.create({ title: "T" });
     try {
-      await caller.tasks.get({ id: created.id, extra: true } as unknown);
+      await caller.tasks.get({ id: created.id, extra: true } as never);
       throw new Error("expected throw");
     } catch (error) {
       expectTRPCError(error, "BAD_REQUEST");
@@ -197,7 +197,7 @@ describe("tasks.create", () => {
   it("throws BAD_REQUEST for unknown keys", async () => {
     const caller = makeCaller(false);
     try {
-      await caller.tasks.create({ title: "T", id: "x" } as unknown);
+      await caller.tasks.create({ title: "T", id: "x" } as never);
       throw new Error("expected throw");
     } catch (error) {
       const trpcError = expectTRPCError(error, "BAD_REQUEST");
@@ -270,7 +270,7 @@ describe("tasks.update", () => {
     const caller = makeCaller(false);
     const created = await caller.tasks.create({ title: "T" });
     try {
-      await caller.tasks.update({ id: created.id, title: "X", status: "todo" } as unknown);
+      await caller.tasks.update({ id: created.id, title: "X", status: "todo" } as never);
       throw new Error("expected throw");
     } catch (error) {
       expectTRPCError(error, "BAD_REQUEST");
@@ -287,7 +287,7 @@ describe("tasks.update", () => {
         description: null,
         status: "todo",
         createdAt: "x",
-      } as unknown);
+      } as never);
       throw new Error("expected throw");
     } catch (error) {
       const trpcError = expectTRPCError(error, "BAD_REQUEST");
