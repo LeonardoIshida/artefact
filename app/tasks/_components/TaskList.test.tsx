@@ -20,11 +20,12 @@ describe("TaskList", () => {
         <TaskList initialTasks={[]} />
       </TRPCProvider>,
     );
+    expect(screen.getByRole("heading", { name: "Tasks", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Create task" })).toHaveAttribute(
       "href",
       "/tasks/new",
     );
-    for (const column of ["To Do", "In Progress", "Done"]) {
+    for (const column of ["To do", "In progress", "Done"]) {
       expect(screen.getByRole("region", { name: column })).toBeInTheDocument();
     }
   });
