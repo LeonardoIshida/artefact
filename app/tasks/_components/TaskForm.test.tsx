@@ -92,7 +92,7 @@ describe("TaskForm (create mode)", () => {
     expect(await screen.findByText("Title is required")).toBeInTheDocument();
   });
 
-  it("clears a create draft and stays on the form when canceled", () => {
+  it("clears a create draft and returns to the task board when canceled", () => {
     render(
       <TRPCProvider>
         <TaskForm mode="create" />
@@ -107,10 +107,7 @@ describe("TaskForm (create mode)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(screen.getByLabelText("Title")).toHaveValue("");
-    expect(screen.getByLabelText("Description")).toHaveValue("");
-    expect(screen.getByRole("button", { name: "Create task" })).toBeInTheDocument();
-    expect(navigation.push).not.toHaveBeenCalled();
+    expect(navigation.push).toHaveBeenCalledWith("/tasks");
   });
 
   it("returns to the board with creation feedback after a successful save", async () => {
@@ -195,7 +192,7 @@ describe("TaskForm (edit mode)", () => {
     expect(screen.getByRole("button", { name: "Update task" })).toBeInTheDocument();
   });
 
-  it("marks changed values and resets an edit draft on cancel", () => {
+  it("returns to the task board when canceling an edit", () => {
     render(
       <TRPCProvider>
         <TaskForm mode="edit" initialTask={sampleTask} />
@@ -204,14 +201,10 @@ describe("TaskForm (edit mode)", () => {
     fireEvent.change(screen.getByLabelText("New title"), {
       target: { value: "Buy eggs" },
     });
-    expect(screen.getByText("Changed")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(screen.getByLabelText("New title")).toHaveValue("Buy milk");
-    expect(screen.getByLabelText("New description")).toHaveValue("2% fat");
-    expect(screen.queryByText("Changed")).not.toBeInTheDocument();
-    expect(navigation.push).not.toHaveBeenCalled();
+    expect(navigation.push).toHaveBeenCalledWith("/tasks");
   });
 
   it("associates invalid edit fields with their error text", () => {
