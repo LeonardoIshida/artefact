@@ -249,6 +249,7 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
     setFieldErrors([]);
     setBanner(null);
     setShouldValidate(false);
+    router.push("/tasks");
   };
 
   const handleBlur = () => {
