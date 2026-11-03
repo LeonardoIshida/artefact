@@ -21,22 +21,27 @@ async function listAllStatusPages(repo: InMemoryTaskRepository) {
 
 describe("InMemoryTaskRepository", () => {
   describe("seeding", () => {
-    it("seeds 3 tasks with todo/in_progress/done on construction by default", async () => {
+    it("seeds 15 todo tasks plus one in_progress and one done", async () => {
       const repo = new InMemoryTaskRepository();
-      const tasks = await listAllStatusPages(repo);
-      expect(tasks).toHaveLength(3);
-      const statuses = tasks.map((task) => task.status).sort();
-      expect(statuses).toEqual(["done", "in_progress", "todo"]);
+      const todoPage = await repo.listPage({ status: "todo" });
+      const inProgressPage = await repo.listPage({ status: "in_progress" });
+      const donePage = await repo.listPage({ status: "done" });
+
+      expect(todoPage.items).toHaveLength(10);
+      expect(typeof todoPage.nextCursor).toBe("string");
+      expect(inProgressPage.items).toHaveLength(1);
+      expect(donePage.items).toHaveLength(1);
     });
 
-    it("seeds one todo without description and two with descriptions", async () => {
+    it("seeds todo tasks without descriptions and in_progress/done with descriptions", async () => {
       const repo = new InMemoryTaskRepository();
-      const tasks = await listAllStatusPages(repo);
-      const withoutDescription = tasks.filter((task) => task.description === null);
-      expect(withoutDescription).toHaveLength(1);
-      expect(withoutDescription[0].status).toBe("todo");
-      const withDescription = tasks.filter((task) => task.description !== null);
-      expect(withDescription).toHaveLength(2);
+      const todoPage = await repo.listPage({ status: "todo" });
+      const inProgressPage = await repo.listPage({ status: "in_progress" });
+      const donePage = await repo.listPage({ status: "done" });
+
+      expect(todoPage.items.every((task) => task.description === null)).toBe(true);
+      expect(inProgressPage.items[0].description).not.toBeNull();
+      expect(donePage.items[0].description).not.toBeNull();
     });
 
     it("seeds tasks with staggered updatedAt values", async () => {
