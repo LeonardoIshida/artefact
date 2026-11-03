@@ -18,27 +18,95 @@ function expectTRPCError(error: unknown, code: string): TRPCError {
 }
 
 describe("tasks.list", () => {
-  it("returns seeded tasks ordered by updatedAt desc", async () => {
+  it("returns a page containing only tasks from the requested status", async () => {
     const caller = makeCaller(true);
-    const tasks = await caller.tasks.list();
-    expect(tasks).toHaveLength(3);
-    for (let i = 1; i < tasks.length; i++) {
-      expect(tasks[i - 1].updatedAt >= tasks[i].updatedAt).toBe(true);
-    }
+
+    const page = await caller.tasks.list({ status: "todo" });
+
+    expect(page.items.map((task) => task.status)).toEqual(["todo"]);
+    expect(page.nextCursor).toBeNull();
   });
 
-  it("returns an empty array when there are no tasks", async () => {
+  it("accepts the paging metadata supplied by the infinite-query hook", async () => {
+    const caller = makeCaller(true);
+
+    const page = await caller.tasks.list({
+      status: "todo",
+      direction: "forward",
+    });
+
+    expect(page.items.map((task) => task.status)).toEqual(["todo"]);
+  });
+
+  it("treats a null cursor as the first page", async () => {
+    const caller = makeCaller(true);
+
+    const page = await caller.tasks.list({ status: "todo", cursor: null });
+
+    expect(page.items.map((task) => task.status)).toEqual(["todo"]);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it("requires a status", async () => {
     const caller = makeCaller(false);
-    const tasks = await caller.tasks.list();
-    expect(tasks).toEqual([]);
+
+    await expect(caller.tasks.list({} as unknown)).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("rejects an invalid status", async () => {
+    const caller = makeCaller(false);
+
+    await expect(
+      caller.tasks.list({ status: "archived" } as unknown),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("rejects unknown list input keys", async () => {
+    const caller = makeCaller(false);
+
+    await expect(
+      caller.tasks.list({ status: "todo", limit: 20 } as unknown),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("maps an invalid cursor to BAD_REQUEST", async () => {
+    const caller = makeCaller(false);
+
+    await expect(
+      caller.tasks.list({ status: "todo", cursor: "not-a-cursor" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("rejects a cursor issued for another status", async () => {
+    const caller = makeCaller(false);
+    for (let index = 1; index <= 11; index += 1) {
+      await caller.tasks.create({ title: `Task ${index}` });
+    }
+    const todoPage = await caller.tasks.list({ status: "todo" });
+
+    await expect(
+      caller.tasks.list({ status: "done", cursor: todoPage.nextCursor }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("returns an empty terminal page when the status has no tasks", async () => {
+    const caller = makeCaller(false);
+
+    const page = await caller.tasks.list({ status: "todo" });
+
+    expect(page).toEqual({ items: [], nextCursor: null });
   });
 
   it("reflects a newly created task", async () => {
     const caller = makeCaller(false);
     await caller.tasks.create({ title: "New task" });
-    const tasks = await caller.tasks.list();
-    expect(tasks).toHaveLength(1);
-    expect(tasks[0].title).toBe("New task");
+
+    const page = await caller.tasks.list({ status: "todo" });
+
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0].title).toBe("New task");
   });
 });
 

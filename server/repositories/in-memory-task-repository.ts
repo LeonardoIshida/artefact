@@ -1,6 +1,101 @@
+import { Buffer } from "node:buffer";
 import type { Task } from "../../shared/task/entity";
 import { TaskNotFound } from "../../shared/task/errors";
-import type { ParsedCreateTaskInput, TaskRepository, UpdateTaskPayload } from "../../shared/task";
+import type {
+  ParsedCreateTaskInput,
+  TaskPage,
+  TaskPageInput,
+  TaskRepository,
+  TaskStatus,
+  UpdateTaskPayload,
+} from "../../shared/task";
+import { InvalidTaskCursor } from "../../shared/task/repository";
+
+const PAGE_SIZE = 10;
+const CURSOR_VERSION = 1;
+const CURSOR_KEYS = new Set(["version", "status", "updatedAt", "sequence"]);
+
+interface TaskEntry {
+  task: Task;
+  sequence: number;
+}
+
+interface OrderingPosition {
+  updatedAt: string;
+  sequence: number;
+}
+
+interface CursorPosition extends OrderingPosition {
+  status: TaskStatus;
+}
+
+function comparePositions(
+  a: OrderingPosition,
+  b: OrderingPosition,
+): number {
+  if (a.updatedAt !== b.updatedAt) {
+    return a.updatedAt > b.updatedAt ? -1 : 1;
+  }
+  return b.sequence - a.sequence;
+}
+
+function getOrderingPosition(entry: TaskEntry): OrderingPosition {
+  return { updatedAt: entry.task.updatedAt, sequence: entry.sequence };
+}
+
+function encodeCursor(position: CursorPosition): string {
+  return Buffer.from(JSON.stringify({ version: CURSOR_VERSION, ...position })).toString(
+    "base64url",
+  );
+}
+
+function decodeCursor(cursor: string, status: TaskStatus): CursorPosition {
+  try {
+    if (!/^[A-Za-z0-9_-]+$/.test(cursor)) {
+      throw new InvalidTaskCursor();
+    }
+
+    const bytes = Buffer.from(cursor, "base64url");
+    if (bytes.toString("base64url") !== cursor) {
+      throw new InvalidTaskCursor();
+    }
+
+    const value: unknown = JSON.parse(bytes.toString("utf8"));
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      Array.isArray(value)
+    ) {
+      throw new InvalidTaskCursor();
+    }
+
+    const payload = value as Record<string, unknown>;
+    const keys = Object.keys(payload);
+    const updatedAt = payload.updatedAt;
+    const sequence = payload.sequence;
+    if (
+      keys.length !== CURSOR_KEYS.size ||
+      keys.some((key) => !CURSOR_KEYS.has(key)) ||
+      payload.version !== CURSOR_VERSION ||
+      payload.status !== status ||
+      typeof updatedAt !== "string" ||
+      !Number.isSafeInteger(sequence) ||
+      typeof sequence !== "number" ||
+      sequence < 1
+    ) {
+      throw new InvalidTaskCursor();
+    }
+
+    const timestamp = new Date(updatedAt);
+    if (!Number.isFinite(timestamp.getTime()) || timestamp.toISOString() !== updatedAt) {
+      throw new InvalidTaskCursor();
+    }
+
+    return { status, updatedAt, sequence };
+  } catch {
+    throw new InvalidTaskCursor();
+  }
+}
 
 /**
  * In-memory, Map-backed adapter for `TaskRepository`.
@@ -58,20 +153,37 @@ export class InMemoryTaskRepository implements TaskRepository {
     }
   }
 
-  async list(): Promise<Task[]> {
-    const entries = [...this.store.entries()].map(([id, task]) => ({
-      task: { ...task },
-      seq: this.seqById.get(id) ?? 0,
-    }));
+  async listPage({ status, cursor }: TaskPageInput): Promise<TaskPage> {
+    const position = cursor == null ? null : decodeCursor(cursor, status);
+    const entries: TaskEntry[] = [...this.store.entries()]
+      .filter(([, task]) => task.status === status)
+      .map(([id, task]) => ({
+        task: { ...task },
+        sequence: this.seqById.get(id) ?? 0,
+      }));
 
-    entries.sort((a, b) => {
-      if (a.task.updatedAt !== b.task.updatedAt) {
-        return a.task.updatedAt > b.task.updatedAt ? -1 : 1;
-      }
-      return b.seq - a.seq;
-    });
+    entries.sort((a, b) => comparePositions(getOrderingPosition(a), getOrderingPosition(b)));
 
-    return entries.map((entry) => entry.task);
+    const afterPosition = position === null
+      ? entries
+      : entries.filter(
+          (entry) => comparePositions(getOrderingPosition(entry), position) > 0,
+        );
+    const pageEntries = afterPosition.slice(0, PAGE_SIZE);
+    const hasMore = afterPosition.length > PAGE_SIZE;
+    const lastEntry = pageEntries[pageEntries.length - 1];
+
+    return {
+      items: pageEntries.map(({ task }) => task),
+      nextCursor:
+        hasMore && lastEntry
+          ? encodeCursor({
+              status,
+              updatedAt: lastEntry.task.updatedAt,
+              sequence: lastEntry.sequence,
+            })
+          : null,
+    };
   }
 
   async get(id: string): Promise<Task> {
