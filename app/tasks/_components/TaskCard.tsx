@@ -33,7 +33,7 @@ export default function TaskCard({
   const busy = isDeleting || isMoving;
 
   return (
-    <Card size="sm" className={cn("transition-shadow hover:shadow-sm", isDragging && "opacity-40")}>
+    <Card size="sm" className={cn("shrink-0 transition-shadow hover:shadow-sm", isDragging && "opacity-40")}>
       <CardContent className="flex items-start gap-1">
         <button
           type="button"
