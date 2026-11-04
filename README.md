@@ -75,12 +75,25 @@ Incremental loading is implemented **per status column**, not as a single page-w
 - On any successful mutation (create/update/delete), all three lanes are reset to their first pages to avoid stale pages, duplicates, or gaps.
 - Specs: `specs/frontend/08-task-infinite-scroll.md` and `specs/backend/07-task-pagination.md`.
 
+## How to use the application
+
+1. Open the app at `/` (redirects to `/tasks`). The board shows four columns: **New Task**, **To do**, **In progress**, **Done**.
+2. Click **Create task** in the New Task column (or the “New Task” nav link) to add a task. Title is required; description and tags are optional.
+3. Click a card to view its details; use the pencil icon to edit (title, description, status, tags) or the trash icon to delete (with confirmation).
+4. Drag a card by its grip handle onto another status column to move it (desktop). On smaller screens, change status via the edit form.
+5. Scroll a column to load more tasks incrementally (10 per page). A **Load more** button is also available.
+6. Feedback (success/error) appears as a transient banner; lane-local errors show a **Retry** button.
+
+## Documentation & design decisions
+
+Design decisions, contracts, and implementation notes for every feature are documented as specs under `specs/` (e.g. `specs/backend/07-task-pagination.md`, `specs/frontend/08-task-infinite-scroll.md`, `specs/frontend/09-task-drag-and-drop.md`, `specs/frontend/10-task-tags.md`). Commit/branch conventions and coding standards live in `AGENTS.md`.
+
 ## Project structure
 
 - `app/` — Next.js pages, layouts, components, route handlers.
 - `server/` — tRPC init, routers, repositories, composition, SSR helpers.
 - `shared/` — framework-free domain code (entity, errors, repository, validation).
-- `specs/` — feature specifications.
+- `specs/` — feature specifications and design decisions.
 - `public/` — static assets.
 
 ## Notes
