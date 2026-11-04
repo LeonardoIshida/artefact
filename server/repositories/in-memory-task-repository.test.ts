@@ -33,15 +33,18 @@ describe("InMemoryTaskRepository", () => {
       expect(donePage.items).toHaveLength(1);
     });
 
-    it("seeds todo tasks without descriptions and in_progress/done with descriptions", async () => {
+    it("seeds todo tasks with descriptions and in_progress/done with descriptions", async () => {
       const repo = new InMemoryTaskRepository();
       const todoPage = await repo.listPage({ status: "todo" });
       const inProgressPage = await repo.listPage({ status: "in_progress" });
       const donePage = await repo.listPage({ status: "done" });
 
-      expect(todoPage.items.every((task) => task.description === null)).toBe(true);
+      expect(todoPage.items.every((task) => task.description !== null)).toBe(true);
+      expect(todoPage.items.every((task) => task.tags.length > 0)).toBe(true);
       expect(inProgressPage.items[0].description).not.toBeNull();
+      expect(inProgressPage.items[0].tags.length).toBeGreaterThan(0);
       expect(donePage.items[0].description).not.toBeNull();
+      expect(donePage.items[0].tags.length).toBeGreaterThan(0);
     });
 
     it("seeds tasks with staggered updatedAt values", async () => {

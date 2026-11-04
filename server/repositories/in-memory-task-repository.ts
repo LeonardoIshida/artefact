@@ -124,30 +124,51 @@ export class InMemoryTaskRepository implements TaskRepository {
     // Seed enough "todo" tasks to exceed one page (PAGE_SIZE) so the board's
     // incremental loading can be exercised out of the box; the other statuses
     // keep a single task each.
+    const todoDescriptions = [
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+      "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
+      "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum.",
+      "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia.",
+    ];
+    const todoTags: Array<Array<{ name: string; color: Task["tags"][number]["color"] }>> = [
+      [{ name: "frontend", color: "blue" }],
+      [{ name: "backend", color: "green" }],
+      [{ name: "urgent", color: "red" }, { name: "bug", color: "orange" }],
+      [{ name: "docs", color: "gray" }],
+      [{ name: "design", color: "violet" }],
+    ];
+
     const seeds: Array<{
       title: string;
       description: string | null;
       status: Task["status"];
+      tags: Task["tags"];
       offsetMs: number;
     }> = [];
     for (let index = 1; index <= 15; index += 1) {
+      const descriptionIndex = (index - 1) % todoDescriptions.length;
+      const tagIndex = (index - 1) % todoTags.length;
       seeds.push({
         title: `Seed task: todo ${index}`,
-        description: null,
+        description: todoDescriptions[descriptionIndex],
         status: "todo",
+        tags: todoTags[tagIndex],
         offsetMs: (16 - index) * 60 * 1000,
       });
     }
     seeds.push({
       title: "Seed task: in progress",
-      description: "A task currently being worked on.",
+      description: "A task currently being worked on. Lorem ipsum dolor sit amet.",
       status: "in_progress",
+      tags: [{ name: "review", color: "amber" }, { name: "frontend", color: "blue" }],
       offsetMs: 0,
     });
     seeds.push({
       title: "Seed task: done",
-      description: "A task that has been completed.",
+      description: "A task that has been completed. Lorem ipsum dolor sit amet.",
       status: "done",
+      tags: [{ name: "shipped", color: "green" }],
       offsetMs: 0,
     });
 
@@ -158,7 +179,7 @@ export class InMemoryTaskRepository implements TaskRepository {
         title: seed.title,
         description: seed.description,
         status: seed.status,
-        tags: [],
+        tags: seed.tags,
         createdAt: timestamp,
         updatedAt: timestamp,
       };
