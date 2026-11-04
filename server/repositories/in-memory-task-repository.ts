@@ -12,6 +12,10 @@ import type {
 import { InvalidTaskCursor } from "../../shared/task/repository";
 
 const PAGE_SIZE = 10;
+
+function cloneTask(task: Task): Task {
+  return { ...task, tags: task.tags.map((tag) => ({ ...tag })) };
+}
 const CURSOR_VERSION = 1;
 const CURSOR_KEYS = new Set(["version", "status", "updatedAt", "sequence"]);
 
@@ -158,7 +162,7 @@ export class InMemoryTaskRepository implements TaskRepository {
         createdAt: timestamp,
         updatedAt: timestamp,
       };
-      this.store.set(task.id, task);
+      this.store.set(task.id, cloneTask(task));
       this.seqById.set(task.id, ++this.seq);
     }
   }
@@ -168,7 +172,7 @@ export class InMemoryTaskRepository implements TaskRepository {
     const entries: TaskEntry[] = [...this.store.entries()]
       .filter(([, task]) => task.status === status)
       .map(([id, task]) => ({
-        task: { ...task },
+        task: cloneTask(task),
         sequence: this.seqById.get(id) ?? 0,
       }));
 
@@ -201,7 +205,7 @@ export class InMemoryTaskRepository implements TaskRepository {
     if (!task) {
       throw new TaskNotFound(id);
     }
-    return { ...task };
+    return cloneTask(task);
   }
 
   async create(input: ParsedCreateTaskInput): Promise<Task> {
@@ -215,9 +219,9 @@ export class InMemoryTaskRepository implements TaskRepository {
       createdAt: now,
       updatedAt: now,
     };
-    this.store.set(task.id, task);
+    this.store.set(task.id, cloneTask(task));
     this.seqById.set(task.id, ++this.seq);
-    return { ...task };
+    return cloneTask(task);
   }
 
   async update(id: string, payload: UpdateTaskPayload): Promise<Task> {
@@ -235,9 +239,9 @@ export class InMemoryTaskRepository implements TaskRepository {
       createdAt: existing.createdAt,
       updatedAt: now,
     };
-    this.store.set(id, task);
+    this.store.set(id, cloneTask(task));
     this.seqById.set(id, ++this.seq);
-    return { ...task };
+    return cloneTask(task);
   }
 
   async delete(id: string): Promise<void> {

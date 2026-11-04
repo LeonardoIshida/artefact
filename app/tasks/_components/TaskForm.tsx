@@ -28,6 +28,8 @@ import {
   parseUpdateTaskInput,
   ValidationFailed,
   TAG_COLORS,
+  TAG_NAME_MAX_LENGTH,
+  TAGS_MAX_COUNT,
   type Task,
   type TagColor,
   type TaskStatus,
@@ -215,6 +217,9 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
     normalizeDescription(state.description) !==
       normalizeDescription(initialState.description);
   const isStatusChanged = isEdit && state.status !== initialState.status;
+  const isTagsChanged =
+    isEdit &&
+    JSON.stringify(state.tags) !== JSON.stringify(initialState.tags);
 
   const updateField = <K extends keyof FormState>(
     field: K,
@@ -228,11 +233,18 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
   const addTag = () => {
     const name = tagInput.trim();
     if (name === "") return;
+    if (name.length > TAG_NAME_MAX_LENGTH) {
+      setBanner(`Tag names must be at most ${TAG_NAME_MAX_LENGTH} characters`);
+      return;
+    }
     if (state.tags.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
       setTagInput("");
       return;
     }
-    if (state.tags.length >= 5) return;
+    if (state.tags.length >= TAGS_MAX_COUNT) {
+      setBanner(`At most ${TAGS_MAX_COUNT} tags are allowed`);
+      return;
+    }
     setState((current) => ({
       ...current,
       tags: [...current.tags, { name, color: tagColor }],
@@ -460,7 +472,10 @@ export default function TaskForm({ mode, initialTask }: TaskFormProps) {
         <Card>
           <CardContent className="space-y-3 py-4">
             <div className="space-y-2">
-              <Label htmlFor="tag-input">Tags</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="tag-input">Tags</Label>
+                {isTagsChanged ? <Badge variant="secondary">Changed</Badge> : null}
+              </div>
               {isEdit && initialTask && initialTask.tags.length > 0 ? (
                 <p className="text-xs text-muted-foreground">
                   Current:{" "}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import {
@@ -49,21 +49,41 @@ function useLaneInfiniteScroll(
   sentinelRef: React.RefObject<HTMLDivElement | null>,
 ) {
   const fetchingRef = useRef(false);
+  // Keep the latest lane in a ref so callbacks stay stable across renders
+  // instead of tearing down the IntersectionObserver on every lane update.
+  const laneRef = useRef(lane);
+  useEffect(() => {
+    laneRef.current = lane;
+  });
 
   const tryFetch = useCallback(() => {
+    const currentLane = laneRef.current;
     if (fetchingRef.current) return;
-    if (!lane.hasNextPage) return;
-    if (lane.isFetchingNextPage) return;
+    if (!currentLane.hasNextPage) return;
+    if (currentLane.isFetchingNextPage) return;
     fetchingRef.current = true;
-    lane.fetchNextPage();
-  }, [lane]);
+    currentLane.fetchNextPage();
+  }, []);
+
+  // Track desktop (xl) so the observer root is recomputed on resize.
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(min-width: 1280px)").matches
+      : false,
+  );
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia("(min-width: 1280px)");
+    const handler = () => setIsDesktop(mql.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
 
-    const isDesktop = () => window.matchMedia("(min-width: 1280px)").matches;
-    const root = isDesktop() ? containerRef.current : null;
+    const root = isDesktop ? containerRef.current : null;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -81,13 +101,12 @@ function useLaneInfiniteScroll(
     return () => {
       observer.disconnect();
     };
-  }, [lane, containerRef, sentinelRef, status, tryFetch]);
+  }, [isDesktop, containerRef, sentinelRef, tryFetch]);
 
-  // Reset fetching lock when fetch completes, and check if sentinel is still visible
+  // Reset fetching lock when fetch completes, and check if sentinel is still visible.
   useEffect(() => {
     if (lane.isFetchingNextPage) return;
     fetchingRef.current = false;
-    // If sentinel is still visible, fetch next page
     const sentinel = sentinelRef.current;
     if (!sentinel || !lane.hasNextPage) return;
     const rect = sentinel.getBoundingClientRect();
@@ -102,7 +121,7 @@ function useLaneInfiniteScroll(
     if (inView) {
       tryFetch();
     }
-  }, [lane.isFetchingNextPage, lane.hasNextPage, lane, sentinelRef, containerRef, tryFetch]);
+  }, [lane.isFetchingNextPage, lane.hasNextPage, sentinelRef, containerRef, tryFetch]);
 }
 
 function LaneSentinel({
@@ -220,11 +239,17 @@ export default function TaskBoard({
     }
   };
 
-  const containerRefs = {
-    todo: useRef<HTMLDivElement>(null),
-    in_progress: useRef<HTMLDivElement>(null),
-    done: useRef<HTMLDivElement>(null),
-  };
+  const todoContainerRef = useRef<HTMLDivElement>(null);
+  const inProgressContainerRef = useRef<HTMLDivElement>(null);
+  const doneContainerRef = useRef<HTMLDivElement>(null);
+  const containerRefs = useMemo(
+    () => ({
+      todo: todoContainerRef,
+      in_progress: inProgressContainerRef,
+      done: doneContainerRef,
+    }),
+    [],
+  );
 
   return (
     <DndContext
