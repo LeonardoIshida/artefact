@@ -139,7 +139,7 @@ function LaneSentinel({
   if (!lane.hasNextPage) return null;
 
   return (
-    <div ref={sentinelRef} className="flex flex-col items-center gap-2 py-2">
+    <div ref={sentinelRef} className="shrink-0 flex flex-col items-center gap-2 py-2">
       {lane.isFetchingNextPage ? (
         <Spinner label={`Loading more ${status} tasks`} />
       ) : (
@@ -185,7 +185,7 @@ function DroppableColumn({
     <CardContent
       ref={refCallback}
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto",
+        "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto py-3",
         isOver && "ring-2 ring-primary bg-primary/5",
       )}
     >
@@ -298,7 +298,7 @@ export default function TaskBoard({
                 </CardHeader>
                 <DroppableColumn status={status} containerRef={containerRefs[status]}>
                   {lane.isError && columnTasks.length === 0 ? (
-                    <div role="alert" className="text-sm text-destructive">
+                    <div role="alert" className="shrink-0 text-sm text-destructive">
                       {lane.error?.message ?? "Failed to load tasks"}
                       <button
                         type="button"
@@ -309,7 +309,7 @@ export default function TaskBoard({
                       </button>
                     </div>
                   ) : columnTasks.length === 0 ? (
-                    <p className="rounded-lg border border-dashed bg-background px-3 py-6 text-center text-sm text-muted-foreground">
+                    <p className="shrink-0 rounded-lg border border-dashed bg-background px-3 py-6 text-center text-sm text-muted-foreground">
                       No tasks
                     </p>
                   ) : (
@@ -325,7 +325,7 @@ export default function TaskBoard({
                     ))
                   )}
                   {columnTasks.length > 0 && lane.isError ? (
-                    <div role="alert" className="text-sm text-destructive">
+                    <div role="alert" className="shrink-0 text-sm text-destructive">
                       {lane.error?.message ?? "Failed to load more tasks"}
                       <button
                         type="button"
@@ -340,7 +340,7 @@ export default function TaskBoard({
                     <LaneSentinel status={status} lane={lane} containerRef={containerRefs[status]} />
                   ) : null}
                   {lane.isFetchingNextPage && columnTasks.length > 0 ? (
-                    <div className="flex justify-center py-2">
+                    <div className="shrink-0 flex justify-center py-2">
                       <Spinner label={`Loading more ${status} tasks`} />
                     </div>
                   ) : null}
