@@ -82,6 +82,7 @@ export default function TaskDetailDialog({
             <Button
               type="button"
               variant="destructive"
+              className="cursor-pointer"
               aria-label={`Delete task: ${task.title}`}
               onClick={() => onDelete(task)}
             >

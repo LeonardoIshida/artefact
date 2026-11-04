@@ -33,7 +33,7 @@ export default function TaskCard({
   const busy = isDeleting || isMoving;
 
   return (
-    <Card size="sm" className={cn("shrink-0 transition-shadow hover:shadow-sm", isDragging && "opacity-40")}>
+    <Card size="sm" className={cn("shrink-0 cursor-pointer transition-shadow hover:shadow-sm", isDragging && "opacity-40")}>
       <CardContent className="flex items-start gap-1">
         <button
           type="button"
@@ -50,7 +50,7 @@ export default function TaskCard({
         <Button
           type="button"
           variant="ghost"
-          className="h-auto min-w-0 flex-1 justify-start whitespace-normal px-2 py-1 text-left hover:bg-transparent"
+          className="h-auto min-w-0 flex-1 cursor-pointer justify-start whitespace-normal px-2 py-1 text-left hover:bg-transparent"
           aria-label={`View task details: ${task.title}`}
           onClick={() => onOpen(task)}
           disabled={busy}
@@ -92,6 +92,7 @@ export default function TaskCard({
             type="button"
             variant="ghost"
             size="icon-sm"
+            className="cursor-pointer"
             aria-label={`Delete task: ${task.title}`}
             disabled={busy}
             onClick={() => onDelete(task)}
