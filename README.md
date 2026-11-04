@@ -79,7 +79,7 @@ Incremental loading is implemented **per status column**, not as a single page-w
 
 1. Open the app at `/` (redirects to `/tasks`). The board shows four columns: **New Task**, **To do**, **In progress**, **Done**.
 2. Click **Create task** in the New Task column (or the “New Task” nav link) to add a task. Title is required; description and tags are optional.
-3. Click a card to view its details; use the pencil icon to edit (title, description, status, tags) or the trash icon to delete (with confirmation).
+3. Click a card to view its details (title, description, tags, timestamps); use the pencil icon to edit (title, description, status, tags) or the trash icon to delete (with confirmation). The description is only visible here, not on the card.
 4. Drag a card by its grip handle onto another status column to move it (desktop). On smaller screens, change status via the edit form.
 5. Scroll a column to load more tasks incrementally (10 per page). A **Load more** button is also available.
 6. Feedback (success/error) appears as a transient banner; lane-local errors show a **Retry** button.
